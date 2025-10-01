@@ -1,36 +1,52 @@
-# Rsbuild project
+# Code Diff Checker
 
-## Setup
+一个基于 Vue 3 与 `@git-diff-view` 的轻量代码差异预览/比对工具。
 
-Install the dependencies:
+## ScreenShot
 
-```bash
-pnpm install
-```
+![ScreenShot](public/ScreenShot.png)
 
-## Get started
+## 项目使用
 
-Start the dev server, and the app will be available at [http://localhost:3000](http://localhost:3000).
+可使用 npm / yarn / bun 等包管理工具。
 
-```bash
-pnpm dev
-```
-
-Build the app for production:
+#### 安装依赖
 
 ```bash
-pnpm build
+# npm
+npm install
+
+# yarn
+yarn install
 ```
 
-Preview the production build locally:
+#### 本地开发（默认端口 http://localhost:3001）
 
 ```bash
-pnpm preview
+# npm
+npm run dev
+
+# yarn
+yarn dev
 ```
 
-## Learn more
+#### 生产构建
 
-To learn more about Rsbuild, check out the following resources:
+```bash
+# npm
+npm run build
 
-- [Rsbuild documentation](https://rsbuild.rs) - explore Rsbuild features and APIs.
-- [Rsbuild GitHub repository](https://github.com/web-infra-dev/rsbuild) - your feedback and contributions are welcome!
+# yarn
+yarn build
+```
+
+#### 本地预览（预览打包产物）
+
+```bash
+# npm
+npm run preview
+
+# yarn
+yarn preview
+```
+
