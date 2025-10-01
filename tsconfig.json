@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "lib": ["DOM", "ESNext"],
+    "jsx": "preserve",
+    "target": "ESNext",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "jsxImportSource": "vue",
+    "useDefineForClassFields": true,
+
+    /* modules */
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "noUncheckedSideEffectImports": true,
+
+    /* type checking */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true
+  },
+  "include": ["src", "rsbuild.config.ts"]
+}

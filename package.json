@@ -1,0 +1,28 @@
+{
+  "name": "code-diff-checker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rsbuild build",
+    "check": "biome check --write",
+    "dev": "rsbuild dev --open",
+    "format": "biome format --write",
+    "preview": "rsbuild preview"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@git-diff-view/core": "^0.0.32",
+    "@git-diff-view/file": "^0.0.32",
+    "@git-diff-view/lowlight": "^0.0.32",
+    "@git-diff-view/vue": "^0.0.32",
+    "element-plus": "^2.11.4",
+    "vue": "^3.5.21"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.2.3",
+    "@rsbuild/core": "^1.5.6",
+    "@rsbuild/plugin-vue": "^1.1.2",
+    "typescript": "^5.9.2"
+  }
+}
