@@ -1,13 +1,14 @@
 <script setup lang="ts">
-import { DiffFile, generateDiffFile } from '@git-diff-view/file'
-import { DiffModeEnum, DiffView } from '@git-diff-view/vue'
+import type { DiffFile } from '@git-diff-view/file'
+import { generateDiffFile } from '@git-diff-view/file'
+import { DiffModeEnum, DiffView, setEnableFastDiffTemplate } from '@git-diff-view/vue'
 import { computed, ref } from 'vue'
 
-// 示例文本
 const sampleLeft = `import { createApp } from 'vue'
 import App from './App.vue'
 
 createApp(App).mount('#app')
+
 `
 const sampleRight = `import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import ElementPlus from 'element-plus'
@@ -25,6 +26,7 @@ iconEntries.forEach(([name, component]) => {
 })
 
 app.mount('#app')
+
 `
 
 const leftContent = ref(sampleLeft)
@@ -34,7 +36,10 @@ const wrap = ref(true)
 const highlight = ref(true)
 const theme = ref<'light' | 'dark'>('light')
 const fontSize = ref(14)
+const fastDiffEnabled = ref(true)
+
 const diffFile = computed<DiffFile | null>(() => {
+	setEnableFastDiffTemplate(fastDiffEnabled.value)
 	if (leftContent.value === rightContent.value) return null
 	const file = generateDiffFile('tmpFile', leftContent.value, 'tmpFile', rightContent.value, '', '', {})
 	file.initTheme(theme.value)
@@ -73,7 +78,7 @@ const handleClearInput = () => {
 								resize="none"
 								:rows="15"
 								class="input-area"
-								placeholder="请输入左侧文本"
+								placeholder="Please input old code text."
 							/>
 						</el-card>
 					</el-col>
@@ -89,32 +94,58 @@ const handleClearInput = () => {
 								resize="none"
 								:rows="15"
 								class="input-area"
-								placeholder="请输入右侧文本"
+								placeholder="Please input new code text."
 							/>
 						</el-card>
 					</el-col>
 				</el-row>
 
 				<el-card class="control-card">
-					<el-space wrap :size="24">
-						<el-radio-group v-model="mode" size="small">
+					<el-space wrap :size="20">
+						<el-radio-group v-model="mode">
 							<el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
 							<el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
 						</el-radio-group>
 
-						<el-switch v-model="wrap" active-text="自动换行" />
-						<el-switch v-model="highlight" active-text="语法高亮" />
+						<el-switch
+							v-model="fastDiffEnabled"
+							size="large"
+							inline-prompt
+							active-text="Enable FastDiff"
+							inactive-text="Disable FastDiff"
+							style="--el-switch-off-color: #ff4949"
+						/>
+						<el-switch
+							v-model="wrap"
+							size="large"
+							inline-prompt
+							active-text="Enable Wrap"
+							inactive-text="Disable Wrap"
+							style="--el-switch-off-color: #ff4949"
+						/>
+						<el-switch
+							v-model="highlight"
+							size="large"
+							inline-prompt
+							active-text="Enable Highlight"
+							inactive-text="Disable Highlight"
+							style="--el-switch-off-color: #ff4949"
+						/>
 
-						<el-select v-model="theme" style="width: 120px">
-							<el-option label="Light" value="light" />
-							<el-option label="Dark" value="dark" />
-						</el-select>
+						<el-radio-group v-model="theme" >
+							<el-radio-button label="light">Light</el-radio-button>
+							<el-radio-button label="dark">Dark</el-radio-button>
+						</el-radio-group>
 
-						<el-input-number v-model="fontSize" :min="10" :max="24" :step="1" size="default" />
-						<span style="color: #6b7280; font-size: 12px">字体</span>
 
-						<el-button type="info" plain @click="handleSwapContent">左右互换</el-button>
-						<el-button type="warning" plain @click="handleClearInput">清空输入</el-button>
+						<el-input-number v-model="fontSize" :min="14" :max="24" :step="2" >
+							<template #suffix>
+								<span>px</span>
+							</template>
+						</el-input-number>
+
+						<el-button type="info" plain @click="handleSwapContent">SwapSide</el-button>
+						<el-button type="warning" plain @click="handleClearInput">ClearInput</el-button>
 					</el-space>
 				</el-card>
 
