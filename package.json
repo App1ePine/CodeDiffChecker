@@ -8,7 +8,8 @@
     "check": "biome check --write",
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
-    "preview": "rsbuild preview"
+    "preview": "rsbuild preview",
+    "deploy": "yarn build && sh ./scripts/deploy.sh"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -24,5 +25,6 @@
     "@rsbuild/core": "^1.5.6",
     "@rsbuild/plugin-vue": "^1.1.2",
     "typescript": "^5.9.2"
-  }
+  },
+  "packageManager": "yarn@4.10.3"
 }
