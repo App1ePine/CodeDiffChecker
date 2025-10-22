@@ -5,20 +5,38 @@ import PasteEditor from '../views/PasteEditor.vue'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/pastes/new',
   },
   {
-    path: '/dashboard',
-    component: Dashboard,
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/Login.vue'),
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('../views/Register.vue'),
   },
   {
     path: '/pastes/new',
-    component: PasteEditor,
+    name: 'paste-new',
+    component: () => import('../views/PasteEditor.vue'),
   },
   {
-    path: '/pastes/:id/edit',
-    component: PasteEditor,
+    path: '/pastes/:slug',
+    name: 'paste-view',
+    component: () => import('../views/PasteViewer.vue'),
     props: true,
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('../views/NotFound.vue'),
   },
 ]
 
