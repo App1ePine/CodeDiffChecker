@@ -1,0 +1,22 @@
+CREATE TABLE IF NOT EXISTS users (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS pastes (
+  id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  title VARCHAR(200) NULL,
+  left_content MEDIUMTEXT NOT NULL,
+  right_content MEDIUMTEXT NOT NULL,
+  visibility ENUM('public', 'unlisted', 'private') NOT NULL DEFAULT 'public',
+  slug VARCHAR(32) NOT NULL UNIQUE,
+  expires_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pastes_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_pastes_user_id ON pastes (user_id);
+CREATE INDEX idx_pastes_slug ON pastes (slug);
