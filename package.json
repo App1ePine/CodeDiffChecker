@@ -18,6 +18,8 @@
     "@git-diff-view/file": "^0.0.32",
     "@git-diff-view/lowlight": "^0.0.32",
     "@git-diff-view/vue": "^0.0.32",
+    "axios": "^1.7.7",
+    "element-plus": "^2.11.4",
     "cors": "^2.8.5",
     "element-plus": "^2.11.4",
     "express": "^4.19.2",

@@ -1,19 +1,22 @@
+<script setup lang="ts">
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+</script>
+
 <template>
-  <section class="not-found">
-    <el-result icon="warning" title="页面不存在" sub-title="请检查链接是否正确">
-      <template #extra>
-        <RouterLink to="/pastes/new" custom v-slot="{ navigate }">
-          <el-button type="primary" @click="navigate">返回首页</el-button>
-        </RouterLink>
-      </template>
-    </el-result>
-  </section>
+  <div class="not-found">
+    <el-empty description="页面未找到">
+      <el-button type="primary" @click="router.replace({ name: 'editor' })">返回首页</el-button>
+    </el-empty>
+  </div>
 </template>
 
 <style scoped>
 .not-found {
   display: flex;
   justify-content: center;
-  padding: 48px 0;
+  align-items: center;
+  min-height: 50vh;
 }
 </style>

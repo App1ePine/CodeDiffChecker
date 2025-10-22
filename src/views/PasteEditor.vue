@@ -1,292 +1,409 @@
-<script lang="ts" setup>
-import { ElMessage } from 'element-plus'
-import { computed, onMounted, reactive, ref } from 'vue'
+<script setup lang="ts">
+import type { DiffFile } from '@git-diff-view/file'
+import { generateDiffFile } from '@git-diff-view/file'
+import { DiffModeEnum, DiffView, setEnableFastDiffTemplate } from '@git-diff-view/vue'
+import type { AxiosError } from 'axios'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { createPaste, getPaste, updatePaste } from '../api/pastes'
+import http from '../services/http'
+import { useAuthStore } from '../stores/auth'
 
-type VisibilityOption = 'public' | 'unlisted' | 'private'
-type ExpirationOption = '1d' | '7d' | 'forever' | 'custom'
-
-interface FormState {
-  title: string
-  content: string
-  visibility: VisibilityOption
-  expiration: ExpirationOption
+type PasteResponse = {
+  slug: string
+  title?: string
+  leftContent: string
+  rightContent: string
+  mode?: DiffModeEnum
+  wrap?: boolean
+  highlight?: boolean
+  theme?: 'light' | 'dark'
+  fontSize?: number
+  fastDiffEnabled?: boolean
+  ownerId?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
-const router = useRouter()
-const route = useRoute()
+type SaveResponse = {
+  slug: string
+}
 
-const pasteId = computed(() => (typeof route.params.id === 'string' ? route.params.id : undefined))
-const isEdit = computed(() => Boolean(pasteId.value))
+const props = defineProps<{ slug?: string }>()
+
+const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
+
+const leftContent = ref('')
+const rightContent = ref('')
+const mode = ref<DiffModeEnum>(DiffModeEnum.Split)
+const wrap = ref(true)
+const highlight = ref(true)
+const theme = ref<'light' | 'dark'>('light')
+const fontSize = ref(14)
+const fastDiffEnabled = ref(true)
 
 const loading = ref(false)
-const submitting = ref(false)
-const copyDisabled = computed(() => typeof navigator === 'undefined' || !navigator.clipboard)
+const saving = ref(false)
+const editingSlug = ref<string | null>(props.slug ?? null)
+const currentPaste = ref<PasteResponse | null>(null)
+const lastClonedSlug = ref<string | null>(null)
 
-const form = reactive<FormState>({
-  title: '',
-  content: '',
-  visibility: 'public',
-  expiration: '7d',
+const isAuthenticated = computed(() => auth.isAuthenticated.value)
+const canEditExisting = computed(() => {
+  if (!editingSlug.value) return false
+  if (!currentPaste.value?.ownerId) return isAuthenticated.value
+  return auth.user.value?.id === currentPaste.value.ownerId
+})
+const canSave = computed(() => {
+  if (!isAuthenticated.value) return false
+  if (!editingSlug.value) return true
+  return canEditExisting.value
 })
 
-const existingExpiresAt = ref<string | null>(null)
-const existingShareUrl = ref<string>('')
+const shareBase = computed(() => {
+  const configured = import.meta.env.VITE_PUBLIC_BASE_URL as string | undefined
+  if (configured) return configured.replace(/\/$/, '')
+  if (typeof window !== 'undefined') return window.location.origin
+  return 'https://yourdomain'
+})
 
-const matchExpirationOption = (expiresAt: string | null): ExpirationOption => {
-  if (!expiresAt) return 'forever'
-  const target = new Date(expiresAt)
-  if (Number.isNaN(target.getTime())) return 'custom'
-  const now = Date.now()
-  const diff = target.getTime() - now
-  const dayMs = 24 * 60 * 60 * 1000
-  if (Math.abs(diff - dayMs) <= dayMs * 0.5) return '1d'
-  if (Math.abs(diff - 7 * dayMs) <= 7 * dayMs * 0.5) return '7d'
-  return 'custom'
+const resetEditor = () => {
+  leftContent.value = ''
+  rightContent.value = ''
+  mode.value = DiffModeEnum.Split
+  wrap.value = true
+  highlight.value = true
+  theme.value = 'light'
+  fontSize.value = 14
+  fastDiffEnabled.value = true
+  currentPaste.value = null
 }
 
-const showCustomOption = computed(
-  () => isEdit.value && !!existingExpiresAt.value && matchExpirationOption(existingExpiresAt.value) === 'custom'
-)
-
-const customExpirationLabel = computed(() => {
-  if (!existingExpiresAt.value) return '保留当前设置'
-  const date = new Date(existingExpiresAt.value)
-  if (Number.isNaN(date.getTime())) return '保留当前设置'
-  return `保留当前设置（到期：${date.toLocaleString()}）`
-})
-
-const computeExpiresAtValue = (option: ExpirationOption) => {
-  const dayMs = 24 * 60 * 60 * 1000
-  switch (option) {
-    case '1d':
-      return new Date(Date.now() + dayMs).toISOString()
-    case '7d':
-      return new Date(Date.now() + 7 * dayMs).toISOString()
-    case 'forever':
-      return null
-    case 'custom':
-      return existingExpiresAt.value
-    default:
-      return null
+const applyPaste = (paste: PasteResponse, assignSlug: boolean) => {
+  leftContent.value = paste.leftContent ?? ''
+  rightContent.value = paste.rightContent ?? ''
+  if (paste.mode) mode.value = paste.mode
+  if (typeof paste.wrap === 'boolean') wrap.value = paste.wrap
+  if (typeof paste.highlight === 'boolean') highlight.value = paste.highlight
+  if (paste.theme) theme.value = paste.theme
+  if (typeof paste.fontSize === 'number') fontSize.value = paste.fontSize
+  if (typeof paste.fastDiffEnabled === 'boolean') fastDiffEnabled.value = paste.fastDiffEnabled
+  currentPaste.value = paste
+  if (assignSlug) {
+    editingSlug.value = paste.slug
   }
 }
 
-const expiresAtPreview = computed(() => {
-  const value = computeExpiresAtValue(form.expiration)
-  if (!value) return '永久有效'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? '时间未知' : date.toLocaleString()
-})
+const getErrorMessage = (error: unknown) => {
+  const axiosError = error as AxiosError<{ message?: string }>
+  return axiosError.response?.data?.message ?? axiosError.message ?? '操作失败，请稍后重试'
+}
 
-const handleLoad = async (id: string) => {
+const fetchPaste = async (slug: string, assignSlug = true) => {
   loading.value = true
   try {
-    const data = await getPaste(id)
-    form.title = data.title
-    form.content = data.content ?? ''
-    form.visibility = data.visibility
-    existingExpiresAt.value = data.expiresAt ?? null
-    existingShareUrl.value = data.shareUrl ?? ''
-    form.expiration = matchExpirationOption(data.expiresAt ?? null)
+    const { data } = await http.get<PasteResponse>(`/pastes/${slug}`)
+    const resolved = { ...data, slug: data.slug ?? slug }
+    applyPaste(resolved, assignSlug)
+    if (!assignSlug) {
+      editingSlug.value = null
+    }
   } catch (error) {
-    console.error(error)
-    ElMessage.error((error as Error).message ?? '获取 Paste 信息失败')
-    router.push('/dashboard')
+    ElMessage.error(getErrorMessage(error))
   } finally {
     loading.value = false
   }
 }
 
-onMounted(() => {
-  if (pasteId.value) {
-    void handleLoad(pasteId.value)
+const ensureCloneLoaded = async () => {
+  const cloneSlug = route.value.query.clone as string | undefined
+  if (editingSlug.value || !cloneSlug || lastClonedSlug.value === cloneSlug) return
+  await fetchPaste(cloneSlug, false)
+  lastClonedSlug.value = cloneSlug
+}
+
+const diffFile = computed<DiffFile | null>(() => {
+  setEnableFastDiffTemplate(fastDiffEnabled.value)
+  if (leftContent.value === rightContent.value) return null
+  const file = generateDiffFile('left', leftContent.value, 'right', rightContent.value, '', '', {})
+  file.initTheme(theme.value)
+  file.init()
+  file.buildSplitDiffLines()
+  file.buildUnifiedDiffLines()
+  return file
+})
+
+const showShareDialog = async (slug: string) => {
+  const shareUrl = `${shareBase.value}/p/${slug}`
+  try {
+    await ElMessageBox.confirm(`请复制访问链接：<br /><strong>${shareUrl}</strong>`, 'Paste 已保存', {
+      confirmButtonText: '复制链接',
+      cancelButtonText: '关闭',
+      type: 'success',
+      dangerouslyUseHTMLString: true,
+    })
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl)
+      ElMessage.success('链接已复制到剪贴板')
+    } else {
+      ElMessage.info('请手动复制上述链接')
+    }
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
+    ElMessage.error('无法展示分享链接')
+  }
+}
+
+const handleSave = async () => {
+  if (!canSave.value) {
+    ElMessage.warning('请先登录后再保存')
+    router.push({ name: 'login', query: { redirect: route.value.fullPath } })
+    return
+  }
+  if (!leftContent.value && !rightContent.value) {
+    ElMessage.warning('请输入需要保存的内容')
+    return
+  }
+  try {
+    saving.value = true
+    const payload = {
+      leftContent: leftContent.value,
+      rightContent: rightContent.value,
+      mode: mode.value,
+      wrap: wrap.value,
+      highlight: highlight.value,
+      theme: theme.value,
+      fontSize: fontSize.value,
+      fastDiffEnabled: fastDiffEnabled.value,
+    }
+    const request = editingSlug.value
+      ? http.put<SaveResponse>(`/pastes/${editingSlug.value}`, payload)
+      : http.post<SaveResponse>('/pastes', payload)
+    const { data } = await request
+    const slug = data?.slug ?? editingSlug.value
+    if (!slug) {
+      throw new Error('未获取到 Paste 标识')
+    }
+    if (!editingSlug.value) {
+      editingSlug.value = slug
+      router.replace({ name: 'pasteEdit', params: { slug } })
+    }
+    await showShareDialog(slug)
+  } catch (error) {
+    ElMessage.error(getErrorMessage(error))
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(async () => {
+  if (editingSlug.value) {
+    await fetchPaste(editingSlug.value)
+  } else {
+    resetEditor()
+    await ensureCloneLoaded()
   }
 })
 
-const handleSubmit = async () => {
-  if (!form.title.trim()) {
-    ElMessage.warning('请输入标题')
-    return
-  }
-  if (!form.content.trim()) {
-    ElMessage.warning('请输入内容')
-    return
-  }
-
-  submitting.value = true
-  try {
-    const payload = {
-      title: form.title,
-      content: form.content,
-      visibility: form.visibility,
-      expiresAt: computeExpiresAtValue(form.expiration),
-    }
-
-    if (isEdit.value && pasteId.value) {
-      await updatePaste(pasteId.value, payload)
-      ElMessage.success('Paste 已更新')
+watch(
+  () => props.slug,
+  async (newSlug, oldSlug) => {
+    if (newSlug === oldSlug) return
+    if (newSlug) {
+      editingSlug.value = newSlug
+      await fetchPaste(newSlug)
     } else {
-      await createPaste(payload)
-      ElMessage.success('Paste 已创建')
+      editingSlug.value = null
+      resetEditor()
+      await ensureCloneLoaded()
     }
-
-    router.push('/dashboard')
-  } catch (error) {
-    console.error(error)
-    ElMessage.error((error as Error).message ?? '保存失败，请稍后再试')
-  } finally {
-    submitting.value = false
   }
-}
+)
 
-const handleCancel = () => {
-  router.back()
-}
-
-const handleCopyShare = async () => {
-  if (copyDisabled.value) {
-    ElMessage.warning('当前环境不支持一键复制，请手动复制链接')
-    return
+watch(
+  () => route.value.query.clone,
+  async () => {
+    if (editingSlug.value) return
+    await ensureCloneLoaded()
   }
-  try {
-    await navigator.clipboard.writeText(existingShareUrl.value)
-    ElMessage.success('链接已复制')
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('复制失败，请稍后再试')
-  }
-}
+)
 </script>
 
 <template>
-  <div class="editor">
-    <el-card v-loading="loading" class="editor__card" shadow="never">
-      <template #header>
-        <div class="editor__header">
-          <h2>{{ isEdit ? '编辑 Paste' : '新建 Paste' }}</h2>
-          <p>设置标题、内容以及访问策略，方便分享或自留</p>
-        </div>
-      </template>
+  <div class="paste-editor" v-loading="loading">
+    <div class="page-header">
+      <div>
+        <h2>{{ editingSlug ? '编辑 Paste' : '创建 Paste' }}</h2>
+        <p class="subtitle">输入左右代码片段以比对差异，并可保存分享链接</p>
+      </div>
+      <el-button :disabled="!canSave" :loading="saving" type="primary" @click="handleSave">
+        {{ editingSlug ? '保存修改' : '保存' }}
+      </el-button>
+    </div>
 
-      <el-form label-position="top" class="editor__form">
-        <el-form-item label="标题">
-          <el-input v-model="form.title" maxlength="60" placeholder="请输入 Paste 标题" show-word-limit />
-        </el-form-item>
-        <el-form-item label="内容">
+    <el-row :gutter="16" class="editor-row">
+      <el-col :span="12">
+        <el-card class="editor-card">
+          <template #header>
+            <div class="card-header">
+              <span>Left</span>
+            </div>
+          </template>
           <el-input
-            v-model="form.content"
-            :rows="14"
-            placeholder="粘贴代码或文本内容"
+            id="leftCodeContent"
+            v-model="leftContent"
+            :rows="15"
+            class="input-area"
+            placeholder="请输入旧版代码"
             resize="none"
             type="textarea"
           />
-        </el-form-item>
-        <el-form-item label="访问权限">
-          <el-radio-group v-model="form.visibility">
-            <el-radio-button label="public">公开</el-radio-button>
-            <el-radio-button label="unlisted">仅持有链接</el-radio-button>
-            <el-radio-button label="private">仅自己</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item label="过期时间">
-          <div class="editor__expiration">
-            <el-radio-group v-model="form.expiration">
-              <el-radio-button label="1d">1 天</el-radio-button>
-              <el-radio-button label="7d">7 天</el-radio-button>
-              <el-radio-button label="forever">永久</el-radio-button>
-              <el-radio-button v-if="showCustomOption" label="custom">{{ customExpirationLabel }}</el-radio-button>
-            </el-radio-group>
-            <p class="editor__hint">预计在 {{ expiresAtPreview }} 到期</p>
-          </div>
-        </el-form-item>
-      </el-form>
+        </el-card>
+      </el-col>
+      <el-col :span="12">
+        <el-card class="editor-card">
+          <template #header>
+            <div class="card-header">
+              <span>Right</span>
+            </div>
+          </template>
+          <el-input
+            id="rightCodeContent"
+            v-model="rightContent"
+            :rows="15"
+            class="input-area"
+            placeholder="请输入新版代码"
+            resize="none"
+            type="textarea"
+          />
+        </el-card>
+      </el-col>
+    </el-row>
 
-      <div class="editor__actions">
-        <el-button @click="handleCancel">取消</el-button>
-        <el-button :loading="submitting" type="primary" @click="handleSubmit">
-          {{ isEdit ? '保存修改' : '创建 Paste' }}
-        </el-button>
-      </div>
+    <el-card class="control-card" html-export-exclude>
+      <el-space :size="16" wrap>
+        <el-radio-group v-model="mode">
+          <el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
+          <el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
+        </el-radio-group>
+
+        <el-switch
+          v-model="fastDiffEnabled"
+          active-text="启用 FastDiff"
+          inactive-text="关闭 FastDiff"
+          inline-prompt
+        />
+        <el-switch
+          v-model="wrap"
+          active-text="自动换行"
+          inactive-text="禁用换行"
+          inline-prompt
+        />
+        <el-switch
+          v-model="highlight"
+          active-text="语法高亮"
+          inactive-text="无高亮"
+          inline-prompt
+        />
+
+        <el-radio-group v-model="theme">
+          <el-radio-button label="light">Light</el-radio-button>
+          <el-radio-button label="dark">Dark</el-radio-button>
+        </el-radio-group>
+
+        <el-input-number v-model="fontSize" :max="24" :min="12" :step="2">
+          <template #suffix>
+            <span>px</span>
+          </template>
+        </el-input-number>
+      </el-space>
     </el-card>
 
-    <el-card v-if="isEdit && existingShareUrl" class="editor__share" shadow="never">
+    <el-card class="diff-card" shadow="never">
       <template #header>
-        <span>分享信息</span>
+        <div class="card-header">
+          <span>差异结果</span>
+        </div>
       </template>
-      <p class="editor__share-tip">链接将遵循当前的访问权限与过期时间设置。</p>
-      <div class="editor__share-row">
-        <el-input :model-value="existingShareUrl" readonly />
-        <el-button :disabled="copyDisabled" @click="handleCopyShare">复制链接</el-button>
+
+      <div v-if="diffFile" class="diff-wrapper">
+        <DiffView
+          :diff-file="diffFile"
+          :diff-view-font-size="fontSize"
+          :diff-view-highlight="highlight"
+          :diff-view-mode="mode"
+          :diff-view-theme="theme"
+          :diff-view-wrap="wrap"
+        />
       </div>
+      <el-empty v-else description="未检测到差异" />
     </el-card>
   </div>
 </template>
 
 <style scoped>
-.editor {
+.paste-editor {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  padding: 16px 0 48px;
 }
 
-.editor__card,
-.editor__share {
-  border: none;
-  border-radius: 12px;
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.editor__header h2 {
+.page-header h2 {
   margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: #111827;
 }
 
-.editor__header p {
+.subtitle {
   margin: 4px 0 0;
   color: #6b7280;
-  font-size: 13px;
+  font-size: 14px;
 }
 
-.editor__form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.editor__expiration {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.editor__hint {
+.editor-row {
   margin: 0;
-  color: #6b7280;
-  font-size: 12px;
 }
 
-.editor__actions {
+.editor-card :deep(.el-card__header) {
+  padding: 8px 12px;
+}
+
+.editor-card :deep(.el-card__body) {
+  padding: 0;
+}
+
+.input-area :deep(.el-textarea__inner) {
+  border-radius: 0;
+  font-family: 'FiraCode Nerd Font', 'FiraCode', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.control-card {
+  margin-bottom: 8px;
+}
+
+.card-header {
   display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 18px;
+  font-weight: 500;
 }
 
-.editor__share-tip {
-  margin: 0 0 12px;
-  color: #6b7280;
-  font-size: 13px;
+.diff-card :deep(.el-card__body) {
+  padding: 16px;
 }
 
-.editor__share-row {
-  display: flex;
-  gap: 8px;
-}
-
-.editor__share-row .el-input {
-  flex: 1;
+.diff-wrapper {
+  overflow: auto;
 }
 </style>

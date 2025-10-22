@@ -9,11 +9,11 @@ declare module '*.vue' {
   export default component
 }
 
-interface ImportMetaEnv {
-  readonly VITE_API_BASE?: string
-  readonly VITE_DEFAULT_USER_ID?: string
+declare interface ImportMetaEnv {
+  readonly VITE_API_BASE_URL?: string
+  readonly VITE_PUBLIC_BASE_URL?: string
 }
 
-interface ImportMeta {
+declare interface ImportMeta {
   readonly env: ImportMetaEnv
 }
