@@ -1,67 +1,48 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import { useAuthStore } from '../stores/auth'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import Dashboard from '../views/Dashboard.vue'
+import PasteEditor from '../views/PasteEditor.vue'
+
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    redirect: '/pastes/new',
+  },
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('../views/Login.vue'),
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('../views/Register.vue'),
+  },
+  {
+    path: '/pastes/new',
+    name: 'paste-new',
+    component: () => import('../views/PasteEditor.vue'),
+  },
+  {
+    path: '/pastes/:slug',
+    name: 'paste-view',
+    component: () => import('../views/PasteViewer.vue'),
+    props: true,
+  },
+  {
+    path: '/dashboard',
+    name: 'dashboard',
+    component: () => import('../views/Dashboard.vue'),
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    component: () => import('../views/NotFound.vue'),
+  },
+]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes: [
-    {
-      path: '/',
-      name: 'editor',
-      component: () => import('../views/PasteEditor.vue'),
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('../views/Login.vue'),
-      meta: { requiresGuest: true },
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: () => import('../views/Register.vue'),
-      meta: { requiresGuest: true },
-    },
-    {
-      path: '/p/:slug',
-      name: 'pasteViewer',
-      component: () => import('../views/PasteViewer.vue'),
-      props: true,
-    },
-    {
-      path: '/p/:slug/edit',
-      name: 'pasteEdit',
-      component: () => import('../views/PasteEditor.vue'),
-      props: true,
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/my-pastes',
-      name: 'myPastes',
-      component: () => import('../views/MyPastes.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/:pathMatch(.*)*',
-      name: 'notFound',
-      component: () => import('../views/NotFound.vue'),
-    },
-  ],
-})
-
-router.beforeEach((to) => {
-  const auth = useAuthStore()
-  if (to.meta.requiresAuth && !auth.isAuthenticated.value) {
-    return {
-      name: 'login',
-      query: { redirect: to.fullPath },
-    }
-  }
-
-  if (to.meta.requiresGuest && auth.isAuthenticated.value) {
-    return { name: 'editor' }
-  }
-
-  return true
+  routes,
 })
 
 export default router
