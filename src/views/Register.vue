@@ -7,7 +7,6 @@ import http from '../services/http'
 import { type AuthUser, useAuthStore } from '../stores/auth'
 
 type RegisterForm = {
-  username: string
   email: string
   password: string
   confirmPassword: string
@@ -23,21 +22,19 @@ const route = useRoute()
 const formRef = ref<FormInstance>()
 const loading = ref(false)
 const form = reactive<RegisterForm>({
-  username: '',
   email: '',
   password: '',
   confirmPassword: '',
 })
 
 const rules: FormRules<RegisterForm> = {
-  username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
   email: [
     { required: true, message: '请输入邮箱', trigger: 'blur' },
     { type: 'email', message: '邮箱格式不正确', trigger: ['blur', 'change'] },
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不少于 6 位', trigger: 'blur' },
+    { min: 8, message: '密码长度不少于 8 位', trigger: 'blur' },
   ],
   confirmPassword: [
     { required: true, message: '请再次输入密码', trigger: 'blur' },
@@ -64,7 +61,7 @@ const getErrorMessage = (error: unknown) => {
 }
 
 const redirectAfterRegister = () => {
-  const redirect = route.value.query.redirect as string | undefined
+  const redirect = route.query.redirect as string | undefined
   if (redirect) {
     router.replace(redirect)
   } else {
@@ -78,7 +75,6 @@ const handleSubmit = async () => {
     loading.value = true
     await formRef.value.validate()
     const payload = {
-      username: form.username,
       email: form.email,
       password: form.password,
     }
@@ -86,7 +82,13 @@ const handleSubmit = async () => {
     if (!data?.token) {
       throw new Error('未能获取注册凭据')
     }
-    auth.setAuth(data.token, data.user ?? { id: '', username: form.username, email: form.email })
+    auth.setAuth(
+      data.token,
+      data.user ?? {
+        id: 0,
+        email: form.email,
+      },
+    )
     ElMessage.success('注册成功，已自动登录')
     redirectAfterRegister()
   } catch (error) {
@@ -104,9 +106,6 @@ const handleSubmit = async () => {
         <h2 class="card-title">注册</h2>
       </template>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="90px" @submit.prevent>
-        <el-form-item label="用户名" prop="username">
-          <el-input v-model="form.username" autocomplete="username" placeholder="请输入用户名" />
-        </el-form-item>
         <el-form-item label="邮箱" prop="email">
           <el-input v-model="form.email" autocomplete="email" placeholder="请输入邮箱" />
         </el-form-item>

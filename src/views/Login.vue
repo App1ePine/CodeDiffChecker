@@ -41,7 +41,7 @@ const getErrorMessage = (error: unknown) => {
 }
 
 const redirectAfterLogin = () => {
-  const redirect = route.value.query.redirect as string | undefined
+  const redirect = route.query.redirect as string | undefined
   if (redirect) {
     router.replace(redirect)
   } else {
