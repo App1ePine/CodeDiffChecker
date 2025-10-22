@@ -1,270 +1,157 @@
-<script lang="ts" setup>
-import type { DiffFile } from '@git-diff-view/file'
-import { generateDiffFile } from '@git-diff-view/file'
-import { DiffModeEnum, DiffView, setEnableFastDiffTemplate } from '@git-diff-view/vue'
-import { computed, ref } from 'vue'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { useAuthStore } from './stores/auth'
 
-const sampleLeft = `import { createApp } from 'vue'
-import App from './App.vue'
+const router = useRouter()
+const auth = useAuthStore()
 
-createApp(App).mount('#app')
+const isAuthenticated = computed(() => auth.isAuthenticated.value)
+const userName = computed(() => auth.user.value?.username ?? auth.user.value?.email ?? '用户')
+const userInitial = computed(() => (userName.value?.[0] ?? 'U').toUpperCase())
 
-`
-const sampleRight = `import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import { createApp, type Component } from 'vue'
-import App from './App.vue'
-
-const app = createApp(App)
-
-app.use(ElementPlus)
-
-const iconEntries = Object.entries(ElementPlusIconsVue) as [string, Component][]
-iconEntries.forEach(([name, component]) => {
-  app.component(name, component)
-})
-
-app.mount('#app')
-
-`
-
-const leftContent = ref(sampleLeft)
-const rightContent = ref(sampleRight)
-const mode = ref<DiffModeEnum>(DiffModeEnum.Split)
-const wrap = ref(true)
-const highlight = ref(true)
-const theme = ref<'light' | 'dark'>('light')
-const fontSize = ref(14)
-const fastDiffEnabled = ref(true)
-
-const diffFile = computed<DiffFile | null>(() => {
-  setEnableFastDiffTemplate(fastDiffEnabled.value)
-  if (leftContent.value === rightContent.value) return null
-  const file = generateDiffFile('tmpFile', leftContent.value, 'tmpFile', rightContent.value, '', '', {})
-  file.initTheme(theme.value)
-  file.init()
-  file.buildSplitDiffLines()
-  file.buildUnifiedDiffLines()
-  return file
-})
-
-const handleSwapContent = () => {
-  ;[leftContent.value, rightContent.value] = [rightContent.value, leftContent.value]
+const goHome = () => {
+  router.push({ name: 'editor' })
 }
-const handleClearInput = () => {
-  leftContent.value = rightContent.value = ''
+
+const goLogin = () => {
+  router.push({ name: 'login' })
 }
-const handleExportHtml = () => {
-  const doctype = document.doctype
-  const doctypeString = doctype ? new XMLSerializer().serializeToString(doctype) : '<!DOCTYPE html>'
 
-  // 1) 克隆整棵 DOM
-  const root = document.documentElement.cloneNode(true) as HTMLElement
+const goRegister = () => {
+  router.push({ name: 'register' })
+}
 
-  // 2) 固化当前值到可序列化标记
-  // 2.1 textarea：用 textContent 作为初始值
-  root.querySelectorAll('textarea').forEach((t) => {
-    const el = t as HTMLTextAreaElement
-    el.textContent = el.value
-  })
+const goMyPastes = () => {
+  router.push({ name: 'myPastes' })
+}
 
-  // 3) 删除控制按钮卡片（以及你可能标记的其它可排除区域）
-  for (let i = 0; i < root.querySelectorAll('[html-export-exclude], .control-card').length; i++) {
-    const n = root.querySelectorAll('[html-export-exclude], .control-card')[i]
-    n.remove()
+const handleCommand = async (command: string) => {
+  if (command === 'logout') {
+    try {
+      await ElMessageBox.confirm('确认要退出登录吗？', '提示', {
+        confirmButtonText: '退出',
+        cancelButtonText: '取消',
+        type: 'warning',
+      })
+      auth.clearAuth()
+      ElMessage.success('已退出登录')
+      router.push({ name: 'login' })
+    } catch (error) {
+      if (error === 'cancel' || error === 'close') return
+      ElMessage.error('退出登录失败，请稍后重试')
+    }
   }
-
-  // 4) 移除所有脚本与模块预加载，避免重新挂载覆盖快照
-  for (let i = 0; i < root.querySelectorAll('script').length; i++) {
-    const s = root.querySelectorAll('script')[i]
-    s.remove()
-  }
-
-  // 5) 生成并下载静态 HTML
-  const html = `${doctypeString}\n${root.outerHTML}`
-  const timestamp = new Date().toLocaleString().replace(/[:.]/g, '-')
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `index_${timestamp}.html`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
 }
 </script>
 
 <template>
-	<div class="app-container">
-		<el-container>
-			<el-header class="app-header" height="auto">
-				<h1>Code Diff Checker</h1>
-				<p class="subtitle">基于 git-diff-view 的代码差异对比工具</p>
-			</el-header>
-
-			<el-main>
-				<el-row :gutter="16" class="editor-row">
-					<el-col :span="12">
-						<el-card class="editor-card">
-							<template #header>
-								<div class="card-header"><span>Left</span></div>
-							</template>
-							<el-input
-								id="leftCodeContent"
-								v-model="leftContent"
-								:rows="15"
-								class="input-area"
-								placeholder="Please input old code text."
-								resize="none"
-                type="textarea"
-							/>
-						</el-card>
-					</el-col>
-
-					<el-col :span="12">
-						<el-card class="editor-card">
-							<template #header>
-			  					<div class="card-header"><span>Right</span></div>
-							</template>
-							<el-input
-								id="rightCodeContent"
-								v-model="rightContent"
-								:rows="15"
-								class="input-area"
-								placeholder="Please input new code text."
-								resize="none"
-                type="textarea"
-							/>
-						</el-card>
-					</el-col>
-				</el-row>
-
-				<el-card class="control-card" html-export-exclude>
-					<el-space :size="20" wrap>
-						<el-radio-group v-model="mode">
-							<el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
-							<el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
-						</el-radio-group>
-
-						<el-switch
-							v-model="fastDiffEnabled"
-							active-text="Enable FastDiff"
-							inactive-text="Disable FastDiff"
-							inline-prompt
-							size="large"
-							style="--el-switch-off-color: #ff4949"
-						/>
-						<el-switch
-							v-model="wrap"
-							active-text="Enable Wrap"
-							inactive-text="Disable Wrap"
-							inline-prompt
-							size="large"
-							style="--el-switch-off-color: #ff4949"
-						/>
-						<el-switch
-							v-model="highlight"
-							active-text="Enable Highlight"
-							inactive-text="Disable Highlight"
-							inline-prompt
-							size="large"
-							style="--el-switch-off-color: #ff4949"
-						/>
-
-						<el-radio-group v-model="theme" >
-							<el-radio-button label="light">Light</el-radio-button>
-							<el-radio-button label="dark">Dark</el-radio-button>
-						</el-radio-group>
-
-
-						<el-input-number v-model="fontSize" :max="24" :min="14" :step="2" >
-							<template #suffix>
-								<span>px</span>
-							</template>
-						</el-input-number>
-
-						<el-button plain type="info" @click="handleSwapContent">SwapSide</el-button>
-						<el-button plain type="warning" @click="handleClearInput">ClearInput</el-button>
-            <el-button plain type="success" @click="handleExportHtml">ExportHTML</el-button>
-					</el-space>
-				</el-card>
-
-				<el-card class="diff-card" shadow="never">
-					<template #header>
-						<div class="card-header"><span>差异结果</span></div>
-					</template>
-
-					<div v-if="diffFile" class="diff-wrapper">
-						<DiffView
-							:diff-file="diffFile"
-							:diff-view-font-size="fontSize"
-							:diff-view-highlight="highlight"
-							:diff-view-mode="mode"
-							:diff-view-theme="theme"
-							:diff-view-wrap="wrap"
-						/>
-					</div>
-					<el-empty v-else description="未检测到差异" />
-				</el-card>
-			</el-main>
-		</el-container>
-	</div>
+  <el-container class="app-container">
+    <el-header class="app-header" height="auto">
+      <div class="brand" @click="goHome">
+        <span class="brand-title">Code Diff Checker</span>
+        <span class="brand-subtitle">基于 git-diff-view 的代码差异工具</span>
+      </div>
+      <nav class="nav-links">
+        <RouterLink :to="{ name: 'editor' }" class="nav-link">编辑器</RouterLink>
+        <RouterLink v-if="isAuthenticated" :to="{ name: 'myPastes' }" class="nav-link">我的 Paste</RouterLink>
+      </nav>
+      <div class="nav-actions">
+        <template v-if="!isAuthenticated">
+          <el-button text type="primary" @click="goLogin">登录</el-button>
+          <el-button plain type="primary" @click="goRegister">注册</el-button>
+        </template>
+        <template v-else>
+          <el-button text type="primary" @click="goMyPastes">我的 Paste</el-button>
+          <el-dropdown trigger="click" @command="handleCommand">
+            <span class="user-trigger">
+              <el-avatar size="small">{{ userInitial }}</el-avatar>
+              <span class="user-name">{{ userName }}</span>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="logout">退出登录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </template>
+      </div>
+    </el-header>
+    <el-main class="app-main">
+      <RouterView />
+    </el-main>
+  </el-container>
 </template>
 
 <style scoped>
 .app-container {
-	background-color: #f5f6fb;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #f5f6fb 0%, #ffffff 100%);
 }
+
 .app-header {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	gap: 12px;
-	padding: 0 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 12px 24px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
 }
-.app-header h1 {
-	font-size: 32px;
-	font-weight: 600;
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+  user-select: none;
 }
-.subtitle {
-	margin: 0;
-	color: #6b7280;
-	font-size: 14px;
+
+.brand-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
 }
-.editor-row {
-	margin-bottom: 16px;
+
+.brand-subtitle {
+  color: #6b7280;
+  font-size: 12px;
 }
-/* ::v-deep() 相对于 :deep() 对代码编辑器优化, 不会出现警告 */
-.editor-card ::v-deep(.el-card__header) {
-	padding: 8px;
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
-.editor-card ::v-deep(.el-card__body) {
-  padding: 0;
+
+.nav-link {
+  color: #374151;
+  text-decoration: none;
+  font-weight: 500;
 }
-.editor-card ::v-deep(.el-textarea__inner) {
-	border-radius: 0;
-	font-family: 'FiraCode Nerd Font', 'FiraCode', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-	font-size: 14px;
-	line-height: 1.5;
+
+.nav-link.router-link-active {
+  color: #2563eb;
 }
-.control-card {
-	margin-bottom: 16px;
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.card-header {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	font-size: 22px;
-	font-weight: 500;
-	padding: 0;
+
+.user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
 }
-.diff-card ::v-deep(.el-card__body) {
-	padding: 16px;
+
+.user-name {
+  font-weight: 500;
 }
-.diff-wrapper {
-	overflow: auto;
+
+.app-main {
+  padding: 0 24px 48px;
 }
 </style>

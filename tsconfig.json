@@ -20,7 +20,13 @@
     /* type checking */
     "strict": true,
     "noUnusedLocals": true,
-    "noUnusedParameters": true
+    "noUnusedParameters": true,
+
+    "paths": {
+      "@/*": ["src/*"],
+      "axios": ["src/vendor/axios.ts"],
+      "vue-router": ["src/vendor/vue-router.ts"]
+    }
   },
   "include": ["src", "rsbuild.config.ts"]
 }
