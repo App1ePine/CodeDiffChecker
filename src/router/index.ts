@@ -1,4 +1,6 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from '@/lib/router'
+import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import Dashboard from '../views/Dashboard.vue'
+import PasteEditor from '../views/PasteEditor.vue'
 
 const routes: RouteRecordRaw[] = [
   {

@@ -1,254 +1,292 @@
 <script lang="ts" setup>
-import type { DiffFile } from '@git-diff-view/file'
-import { generateDiffFile } from '@git-diff-view/file'
-import { DiffModeEnum, DiffView, setEnableFastDiffTemplate } from '@git-diff-view/vue'
-import { computed, ref } from 'vue'
+import { ElMessage } from 'element-plus'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { createPaste, getPaste, updatePaste } from '../api/pastes'
 
-const sampleLeft = `import { createApp } from 'vue'
-import App from './App.vue'
+type VisibilityOption = 'public' | 'unlisted' | 'private'
+type ExpirationOption = '1d' | '7d' | 'forever' | 'custom'
 
-createApp(App).mount('#app')
+interface FormState {
+  title: string
+  content: string
+  visibility: VisibilityOption
+  expiration: ExpirationOption
+}
 
-`
-const sampleRight = `import * as ElementPlusIconsVue from '@element-plus/icons-vue'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-import { createApp, type Component } from 'vue'
-import App from './App.vue'
+const router = useRouter()
+const route = useRoute()
 
-const app = createApp(App)
+const pasteId = computed(() => (typeof route.params.id === 'string' ? route.params.id : undefined))
+const isEdit = computed(() => Boolean(pasteId.value))
 
-app.use(ElementPlus)
+const loading = ref(false)
+const submitting = ref(false)
+const copyDisabled = computed(() => typeof navigator === 'undefined' || !navigator.clipboard)
 
-const iconEntries = Object.entries(ElementPlusIconsVue) as [string, Component][]
-iconEntries.forEach(([name, component]) => {
-  app.component(name, component)
+const form = reactive<FormState>({
+  title: '',
+  content: '',
+  visibility: 'public',
+  expiration: '7d',
 })
 
-app.mount('#app')
+const existingExpiresAt = ref<string | null>(null)
+const existingShareUrl = ref<string>('')
 
-`
+const matchExpirationOption = (expiresAt: string | null): ExpirationOption => {
+  if (!expiresAt) return 'forever'
+  const target = new Date(expiresAt)
+  if (Number.isNaN(target.getTime())) return 'custom'
+  const now = Date.now()
+  const diff = target.getTime() - now
+  const dayMs = 24 * 60 * 60 * 1000
+  if (Math.abs(diff - dayMs) <= dayMs * 0.5) return '1d'
+  if (Math.abs(diff - 7 * dayMs) <= 7 * dayMs * 0.5) return '7d'
+  return 'custom'
+}
 
-const leftContent = ref(sampleLeft)
-const rightContent = ref(sampleRight)
-const mode = ref<DiffModeEnum>(DiffModeEnum.Split)
-const wrap = ref(true)
-const highlight = ref(true)
-const theme = ref<'light' | 'dark'>('light')
-const fontSize = ref(14)
-const fastDiffEnabled = ref(true)
+const showCustomOption = computed(
+  () => isEdit.value && !!existingExpiresAt.value && matchExpirationOption(existingExpiresAt.value) === 'custom'
+)
 
-const diffFile = computed<DiffFile | null>(() => {
-  setEnableFastDiffTemplate(fastDiffEnabled.value)
-  if (leftContent.value === rightContent.value) return null
-  const file = generateDiffFile('tmpFile', leftContent.value, 'tmpFile', rightContent.value, '', '', {})
-  file.initTheme(theme.value)
-  file.init()
-  file.buildSplitDiffLines()
-  file.buildUnifiedDiffLines()
-  return file
+const customExpirationLabel = computed(() => {
+  if (!existingExpiresAt.value) return '保留当前设置'
+  const date = new Date(existingExpiresAt.value)
+  if (Number.isNaN(date.getTime())) return '保留当前设置'
+  return `保留当前设置（到期：${date.toLocaleString()}）`
 })
 
-const handleSwapContent = () => {
-  ;[leftContent.value, rightContent.value] = [rightContent.value, leftContent.value]
+const computeExpiresAtValue = (option: ExpirationOption) => {
+  const dayMs = 24 * 60 * 60 * 1000
+  switch (option) {
+    case '1d':
+      return new Date(Date.now() + dayMs).toISOString()
+    case '7d':
+      return new Date(Date.now() + 7 * dayMs).toISOString()
+    case 'forever':
+      return null
+    case 'custom':
+      return existingExpiresAt.value
+    default:
+      return null
+  }
 }
-const handleClearInput = () => {
-  leftContent.value = rightContent.value = ''
+
+const expiresAtPreview = computed(() => {
+  const value = computeExpiresAtValue(form.expiration)
+  if (!value) return '永久有效'
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? '时间未知' : date.toLocaleString()
+})
+
+const handleLoad = async (id: string) => {
+  loading.value = true
+  try {
+    const data = await getPaste(id)
+    form.title = data.title
+    form.content = data.content ?? ''
+    form.visibility = data.visibility
+    existingExpiresAt.value = data.expiresAt ?? null
+    existingShareUrl.value = data.shareUrl ?? ''
+    form.expiration = matchExpirationOption(data.expiresAt ?? null)
+  } catch (error) {
+    console.error(error)
+    ElMessage.error((error as Error).message ?? '获取 Paste 信息失败')
+    router.push('/dashboard')
+  } finally {
+    loading.value = false
+  }
 }
-const handleExportHtml = () => {
-  const doctype = document.doctype
-  const doctypeString = doctype ? new XMLSerializer().serializeToString(doctype) : '<!DOCTYPE html>'
 
-  // 1) 克隆整棵 DOM
-  const root = document.documentElement.cloneNode(true) as HTMLElement
+onMounted(() => {
+  if (pasteId.value) {
+    void handleLoad(pasteId.value)
+  }
+})
 
-  // 2) 固化当前值到可序列化标记
-  // 2.1 textarea：用 textContent 作为初始值
-  root.querySelectorAll('textarea').forEach((t) => {
-    const el = t as HTMLTextAreaElement
-    el.textContent = el.value
-  })
-
-  // 3) 删除控制按钮卡片（以及你可能标记的其它可排除区域）
-  for (let i = 0; i < root.querySelectorAll('[html-export-exclude], .control-card').length; i++) {
-    const n = root.querySelectorAll('[html-export-exclude], .control-card')[i]
-    n.remove()
+const handleSubmit = async () => {
+  if (!form.title.trim()) {
+    ElMessage.warning('请输入标题')
+    return
+  }
+  if (!form.content.trim()) {
+    ElMessage.warning('请输入内容')
+    return
   }
 
-  // 4) 移除所有脚本与模块预加载，避免重新挂载覆盖快照
-  for (let i = 0; i < root.querySelectorAll('script').length; i++) {
-    const s = root.querySelectorAll('script')[i]
-    s.remove()
+  submitting.value = true
+  try {
+    const payload = {
+      title: form.title,
+      content: form.content,
+      visibility: form.visibility,
+      expiresAt: computeExpiresAtValue(form.expiration),
+    }
+
+    if (isEdit.value && pasteId.value) {
+      await updatePaste(pasteId.value, payload)
+      ElMessage.success('Paste 已更新')
+    } else {
+      await createPaste(payload)
+      ElMessage.success('Paste 已创建')
+    }
+
+    router.push('/dashboard')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error((error as Error).message ?? '保存失败，请稍后再试')
+  } finally {
+    submitting.value = false
   }
+}
 
-  // 5) 生成并下载静态 HTML
-  const html = `${doctypeString}\n${root.outerHTML}`
-  const timestamp = new Date().toLocaleString().replace(/[:.]/g, '-')
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
+const handleCancel = () => {
+  router.back()
+}
 
-  const a = document.createElement('a')
-  a.href = url
-  a.download = `index_${timestamp}.html`
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+const handleCopyShare = async () => {
+  if (copyDisabled.value) {
+    ElMessage.warning('当前环境不支持一键复制，请手动复制链接')
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(existingShareUrl.value)
+    ElMessage.success('链接已复制')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('复制失败，请稍后再试')
+  }
 }
 </script>
 
 <template>
-  <section class="paste-editor">
-    <el-row :gutter="16" class="editor-row">
-      <el-col :span="12">
-        <el-card class="editor-card">
-          <template #header>
-            <div class="card-header"><span>Left</span></div>
-          </template>
-          <el-input
-            id="leftCodeContent"
-            v-model="leftContent"
-            :rows="15"
-            class="input-area"
-            placeholder="Please input old code text."
-            resize="none"
-            type="textarea"
-          />
-        </el-card>
-      </el-col>
-
-      <el-col :span="12">
-        <el-card class="editor-card">
-          <template #header>
-            <div class="card-header"><span>Right</span></div>
-          </template>
-          <el-input
-            id="rightCodeContent"
-            v-model="rightContent"
-            :rows="15"
-            class="input-area"
-            placeholder="Please input new code text."
-            resize="none"
-            type="textarea"
-          />
-        </el-card>
-      </el-col>
-    </el-row>
-
-    <el-card class="control-card" html-export-exclude>
-      <el-space :size="20" wrap>
-        <el-radio-group v-model="mode">
-          <el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
-          <el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
-        </el-radio-group>
-
-        <el-switch
-          v-model="fastDiffEnabled"
-          active-text="Enable FastDiff"
-          inactive-text="Disable FastDiff"
-          inline-prompt
-          size="large"
-          style="--el-switch-off-color: #ff4949"
-        />
-        <el-switch
-          v-model="wrap"
-          active-text="Enable Wrap"
-          inactive-text="Disable Wrap"
-          inline-prompt
-          size="large"
-          style="--el-switch-off-color: #ff4949"
-        />
-        <el-switch
-          v-model="highlight"
-          active-text="Enable Highlight"
-          inactive-text="Disable Highlight"
-          inline-prompt
-          size="large"
-          style="--el-switch-off-color: #ff4949"
-        />
-
-        <el-radio-group v-model="theme">
-          <el-radio-button label="light">Light</el-radio-button>
-          <el-radio-button label="dark">Dark</el-radio-button>
-        </el-radio-group>
-
-        <el-input-number v-model="fontSize" :max="24" :min="14" :step="2">
-          <template #suffix>
-            <span>px</span>
-          </template>
-        </el-input-number>
-
-        <el-button plain type="info" @click="handleSwapContent">SwapSide</el-button>
-        <el-button plain type="warning" @click="handleClearInput">ClearInput</el-button>
-        <el-button plain type="success" @click="handleExportHtml">ExportHTML</el-button>
-      </el-space>
-    </el-card>
-
-    <el-card class="diff-card" shadow="never">
+  <div class="editor">
+    <el-card v-loading="loading" class="editor__card" shadow="never">
       <template #header>
-        <div class="card-header"><span>差异结果</span></div>
+        <div class="editor__header">
+          <h2>{{ isEdit ? '编辑 Paste' : '新建 Paste' }}</h2>
+          <p>设置标题、内容以及访问策略，方便分享或自留</p>
+        </div>
       </template>
 
-      <div v-if="diffFile" class="diff-wrapper">
-        <DiffView
-          :diff-file="diffFile"
-          :diff-view-font-size="fontSize"
-          :diff-view-highlight="highlight"
-          :diff-view-mode="mode"
-          :diff-view-theme="theme"
-          :diff-view-wrap="wrap"
-        />
+      <el-form label-position="top" class="editor__form">
+        <el-form-item label="标题">
+          <el-input v-model="form.title" maxlength="60" placeholder="请输入 Paste 标题" show-word-limit />
+        </el-form-item>
+        <el-form-item label="内容">
+          <el-input
+            v-model="form.content"
+            :rows="14"
+            placeholder="粘贴代码或文本内容"
+            resize="none"
+            type="textarea"
+          />
+        </el-form-item>
+        <el-form-item label="访问权限">
+          <el-radio-group v-model="form.visibility">
+            <el-radio-button label="public">公开</el-radio-button>
+            <el-radio-button label="unlisted">仅持有链接</el-radio-button>
+            <el-radio-button label="private">仅自己</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="过期时间">
+          <div class="editor__expiration">
+            <el-radio-group v-model="form.expiration">
+              <el-radio-button label="1d">1 天</el-radio-button>
+              <el-radio-button label="7d">7 天</el-radio-button>
+              <el-radio-button label="forever">永久</el-radio-button>
+              <el-radio-button v-if="showCustomOption" label="custom">{{ customExpirationLabel }}</el-radio-button>
+            </el-radio-group>
+            <p class="editor__hint">预计在 {{ expiresAtPreview }} 到期</p>
+          </div>
+        </el-form-item>
+      </el-form>
+
+      <div class="editor__actions">
+        <el-button @click="handleCancel">取消</el-button>
+        <el-button :loading="submitting" type="primary" @click="handleSubmit">
+          {{ isEdit ? '保存修改' : '创建 Paste' }}
+        </el-button>
       </div>
-      <el-empty v-else description="未检测到差异" />
     </el-card>
-  </section>
+
+    <el-card v-if="isEdit && existingShareUrl" class="editor__share" shadow="never">
+      <template #header>
+        <span>分享信息</span>
+      </template>
+      <p class="editor__share-tip">链接将遵循当前的访问权限与过期时间设置。</p>
+      <div class="editor__share-row">
+        <el-input :model-value="existingShareUrl" readonly />
+        <el-button :disabled="copyDisabled" @click="handleCopyShare">复制链接</el-button>
+      </div>
+    </el-card>
+  </div>
 </template>
 
 <style scoped>
-.paste-editor {
+.editor {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.editor-row {
-  margin-bottom: 0;
+.editor__card,
+.editor__share {
+  border: none;
+  border-radius: 12px;
 }
 
-.control-card {
-  margin-bottom: 16px;
+.editor__header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #111827;
 }
 
-/* ::v-deep() 相对于 :deep() 对代码编辑器优化, 不会出现警告 */
-.editor-card ::v-deep(.el-card__header) {
-  padding: 8px;
+.editor__header p {
+  margin: 4px 0 0;
+  color: #6b7280;
+  font-size: 13px;
 }
 
-.editor-card ::v-deep(.el-card__body) {
-  padding: 0;
-}
-
-.editor-card ::v-deep(.el-textarea__inner) {
-  border-radius: 0;
-  font-family: 'FiraCode Nerd Font', 'FiraCode', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.card-header {
+.editor__form {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 22px;
-  font-weight: 500;
-  padding: 0;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.diff-card ::v-deep(.el-card__body) {
-  padding: 16px;
+.editor__expiration {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.diff-wrapper {
-  overflow: auto;
+.editor__hint {
+  margin: 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.editor__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.editor__share-tip {
+  margin: 0 0 12px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.editor__share-row {
+  display: flex;
+  gap: 8px;
+}
+
+.editor__share-row .el-input {
+  flex: 1;
 }
 </style>
