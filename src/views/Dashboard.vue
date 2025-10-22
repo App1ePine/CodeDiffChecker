@@ -72,7 +72,7 @@ const handleCurrentChange = (value: number) => {
 }
 
 const handleCreate = () => {
-  router.push('/pastes/new')
+  router.push({ name: 'editor' })
 }
 
 const handleEdit = (row: PasteSummaryWithUrl) => {

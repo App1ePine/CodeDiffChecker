@@ -1,11 +1,8 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
-import Dashboard from '../views/Dashboard.vue'
-import PasteEditor from '../views/PasteEditor.vue'
-
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/pastes/new',
+    redirect: { name: 'editor' },
   },
   {
     path: '/login',
@@ -19,7 +16,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/pastes/new',
-    name: 'paste-new',
+    name: 'editor',
     component: () => import('../views/PasteEditor.vue'),
   },
   {
@@ -30,7 +27,7 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: '/dashboard',
-    name: 'dashboard',
+    name: 'myPastes',
     component: () => import('../views/Dashboard.vue'),
   },
   {

@@ -1,9 +1,9 @@
 import { computed, reactive, toRefs } from 'vue'
 
 export interface AuthUser {
-  id: string
-  username: string
-  email?: string
+  id: number
+  email: string
+  username?: string | null
   [key: string]: unknown
 }
 

@@ -2,6 +2,9 @@
   "name": "code-diff-checker",
   "version": "1.0.0",
   "private": true,
+  "workspaces": {
+    "packages": [".", "server"]
+  },
   "type": "module",
   "scripts": {
     "build": "rsbuild build",

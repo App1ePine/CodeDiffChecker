@@ -7,7 +7,6 @@ export default defineConfig({
     alias: {
       '@': './src',
       axios: './src/vendor/axios',
-      'vue-router': './src/vendor/vue-router',
     },
   },
   output: {

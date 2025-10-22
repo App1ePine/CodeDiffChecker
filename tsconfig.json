@@ -24,8 +24,7 @@
 
     "paths": {
       "@/*": ["src/*"],
-      "axios": ["src/vendor/axios.ts"],
-      "vue-router": ["src/vendor/vue-router.ts"]
+      "axios": ["src/vendor/axios.ts"]
     }
   },
   "include": ["src", "rsbuild.config.ts"]
