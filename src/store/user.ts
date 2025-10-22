@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { defineStore } from '@/lib/pinia'
 import { computed, ref, watch } from 'vue'
 
 export interface UserProfile {
