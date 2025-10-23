@@ -1,52 +1,105 @@
 # Code Diff Checker
 
-一个基于 Vue 3 与 `@git-diff-view` 的轻量代码差异预览/比对工具。
+An online, shareable diffing workspace built with Vue 3, Element Plus, and `@git-diff-view`, backed by a Hono + MariaDB API for registration, authentication, and share management.
 
-## ScreenShot
+## Features
+- Paste or type code on two panes and preview unified or split diffs with syntax highlighting.
+- Register/login to keep persistent sessions via secure HTTP-only cookies.
+- Authenticated users can create share links, set visibility, define expiration, and delete or edit shares later.
+- Public share pages render diffs read-only with the same viewing controls.
 
-![ScreenShot](public/ScreenShot.png)
+## Repository layout
+- `src/` – Vue 3 frontend powered by Rsbuild.
+- `server/` – Hono-based REST API (TypeScript) with MariaDB storage.
+- `server/migrations/` – SQL migrations for MariaDB schema.
 
-## 项目使用
+## Getting started
 
-可使用 npm / yarn / bun 等包管理工具。
-
-#### 安装依赖
-
+### 1. Install dependencies
 ```bash
-# npm
-npm install
-
-# yarn
 yarn install
 ```
 
-#### 本地开发（默认端口 http://localhost:3001）
+### 2. Configure environment variables
+
+#### Frontend (`.env` at repo root)
+Copy `.env.example` to `.env` and set:
+
+```ini
+VITE_API_BASE_URL=http://localhost:4000  # URL of the Hono server
+# existing deployment vars can remain if you use them
+```
+If the API and frontend are served from the same origin you can omit `VITE_API_BASE_URL`.
+
+#### Backend (`server/.env`)
+Copy `server/.env.example` to `server/.env` and adjust for your MariaDB instance:
+
+```ini
+NODE_ENV=development
+PORT=4000
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_NAME=code_diff_checker
+DB_USER=cdc_user
+DB_PASSWORD=replace-me
+JWT_SECRET=replace-with-strong-secret
+TOKEN_EXPIRES_IN=7d
+FRONTEND_ORIGIN=http://localhost:3001
+SHARE_BASE_URL=http://localhost:3001
+```
+
+### 3. Prepare the database
+1. Create the database/user in MariaDB if needed.
+2. Run the SQL migrations:
+   ```bash
+   yarn db:migrate
+   ```
+
+### 4. Run locally
+Use two terminals during development:
 
 ```bash
-# npm
-npm run dev
+# Terminal 1 – API server (Hono)
+yarn server:dev
 
-# yarn
+# Terminal 2 – Vue dev server (Rsbuild)
 yarn dev
 ```
 
-#### 生产构建
+- Frontend defaults to http://localhost:3001
+- API server defaults to http://localhost:4000
 
+### 5. Build for production
 ```bash
-# npm
-npm run build
-
-# yarn
+# Frontend assets
 yarn build
+
+# API (transpile to server/dist)
+yarn server:build
 ```
-
-#### 本地预览（预览打包产物）
-
+Start the API in production with:
 ```bash
-# npm
-npm run preview
-
-# yarn
-yarn preview
+yarn server:start
 ```
 
+## API overview
+All endpoints live under `/api`.
+
+- `POST /api/auth/register` – create an account and receive a session cookie.
+- `POST /api/auth/login` – login with email/password.
+- `POST /api/auth/logout` – destroy the session cookie.
+- `GET /api/auth/me` – fetch the currently authenticated user.
+- `POST /api/shares` – create a share (authenticated).
+- `GET /api/shares` – list shares owned by the logged-in user.
+- `PATCH /api/shares/:id` – update title, visibility, or expiration.
+- `DELETE /api/shares/:id` – delete a share.
+- `GET /api/public/shares/:slug` – fetch a public share by slug; respects hidden/expired flags.
+
+All authenticated routes rely on the HttpOnly cookie issued by login/register.
+
+## Notes
+- The frontend fetch helper always sends `credentials: 'include'` so cookies work across origins (ensure CORS settings match your deployment).
+- Generated share URLs use `SHARE_BASE_URL` to build absolute links; set it to your public frontend origin when deploying.
+- Clipboard copy helpers gracefully fail if the browser blocks clipboard access.
+
+Happy diffing!

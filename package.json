@@ -9,7 +9,11 @@
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
     "preview": "rsbuild preview",
-    "deploy": "yarn build && sh ./scripts/deploy.sh"
+    "deploy": "yarn build && sh ./scripts/deploy.sh",
+    "server:dev": "tsx watch server/src/index.ts",
+    "server:build": "tsc -p server/tsconfig.json",
+    "server:start": "node --enable-source-maps server/dist/index.js",
+    "db:migrate": "tsx server/scripts/run-migrations.ts"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -17,13 +21,26 @@
     "@git-diff-view/file": "^0.0.32",
     "@git-diff-view/lowlight": "^0.0.32",
     "@git-diff-view/vue": "^0.0.32",
+    "@hono/node-server": "^1.13.7",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
     "element-plus": "^2.11.4",
-    "vue": "^3.5.21"
+    "hono": "^4.6.7",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.11.3",
+    "nanoid": "^5.0.7",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.21",
+    "vue-router": "^4.4.5",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.3",
     "@rsbuild/core": "^1.5.6",
     "@rsbuild/plugin-vue": "^1.1.2",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.6",
+    "tsx": "^4.19.1",
     "typescript": "^5.9.2"
   },
   "packageManager": "yarn@4.10.3"

@@ -15,8 +15,8 @@ export default defineConfig({
     },
     assetPrefix: './',
     cleanDistPath: true,
-    inlineScripts: true,
-    inlineStyles: true,
+    // inlineScripts: true,
+    // inlineStyles: true,
   },
   html: {
     title: 'Code Diff Checker',
@@ -26,7 +26,7 @@ export default defineConfig({
       },
       description: 'A Code Diff Checker Based On git-diff-view',
     },
-    inject: 'body',
+    // inject: 'body',
   },
   server: {
     base: '/',
@@ -37,9 +37,9 @@ export default defineConfig({
   performance: {
     removeConsole: true,
     chunkSplit: {
-      strategy: 'all-in-one',
+      strategy: 'split-by-experience',
     },
-    preload: undefined,
-    prefetch: undefined,
+    // preload: undefined,
+    // prefetch: undefined,
   },
 })
