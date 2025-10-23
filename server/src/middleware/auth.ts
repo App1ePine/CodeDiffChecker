@@ -5,27 +5,27 @@ import { COOKIE_NAME, env } from '../env'
 import type { AppVariables } from '../types'
 
 type AppEnv = {
-	Variables: AppVariables
+  Variables: AppVariables
 }
 
 type TokenPayload = {
-	sub: string
-	email: string
+  sub: string
+  email: string
 }
 
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
-	const token = getCookie(c, COOKIE_NAME)
-	if (!token) {
-		return c.json({ error: 'Unauthorized' }, 401)
-	}
+  const token = getCookie(c, COOKIE_NAME)
+  if (!token) {
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
 
-	try {
-		const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload
-		c.set('userId', Number.parseInt(payload.sub, 10))
-		c.set('userEmail', payload.email)
-		await next()
-	} catch (error) {
-		console.error('Token verification failed', error)
-		return c.json({ error: 'Unauthorized' }, 401)
-	}
+  try {
+    const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload
+    c.set('userId', Number.parseInt(payload.sub, 10))
+    c.set('userEmail', payload.email)
+    await next()
+  } catch (error) {
+    console.error('Token verification failed', error)
+    return c.json({ error: 'Unauthorized' }, 401)
+  }
 })

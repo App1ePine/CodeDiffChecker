@@ -1,4 +1,4 @@
 export type AppVariables = {
-	userId: number
-	userEmail: string
+  userId: number
+  userEmail: string
 }

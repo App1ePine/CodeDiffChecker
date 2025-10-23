@@ -8,32 +8,32 @@ import shareRoutes from './routes/shares'
 import type { AppVariables } from './types'
 
 type AppEnv = {
-	Variables: AppVariables
+  Variables: AppVariables
 }
 
 const app = new Hono<AppEnv>()
 
 app.use('*', logger())
 app.use(
-	'/api/*',
-	cors({
-		origin: (origin) => {
-			if (!origin) return env.FRONTEND_ORIGIN
-			if (origin === env.FRONTEND_ORIGIN) return origin
-			return ''
-		},
-		allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
-		allowHeaders: ['Content-Type'],
-		credentials: true,
-		maxAge: 86400,
-	}),
+  '/api/*',
+  cors({
+    origin: (origin) => {
+      if (!origin) return env.FRONTEND_ORIGIN
+      if (origin === env.FRONTEND_ORIGIN) return origin
+      return ''
+    },
+    allowMethods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type'],
+    credentials: true,
+    maxAge: 86400,
+  })
 )
 
 app.use('/api/*', async (c, next) => {
-	await next()
-	if (!c.res.headers.has('Cache-Control')) {
-		c.header('Cache-Control', 'no-store, max-age=0')
-	}
+  await next()
+  if (!c.res.headers.has('Cache-Control')) {
+    c.header('Cache-Control', 'no-store, max-age=0')
+  }
 })
 
 app.get('/health', (c) => c.json({ status: 'ok' }))

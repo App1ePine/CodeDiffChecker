@@ -27,27 +27,27 @@ const rules: FormRules = {
 }
 
 async function handleSubmit() {
-	if (!formRef.value) return
+  if (!formRef.value) return
 
-	const valid = await formRef.value.validate()
-	if (!valid) return
+  const valid = await formRef.value.validate()
+  if (!valid) return
 
-	submitting.value = true
-	try {
-		await authStore.loginUser({ email: form.email, password: form.password })
-		const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
-		await router.push(redirect)
-		ElMessage.success('Welcome back!')
-	} catch (error) {
-		if (error instanceof ApiError) {
-			ElMessage.error(error.message)
-		} else {
-			console.error('Login failed', error)
-			ElMessage.error('Unable to sign in. Please try again.')
-		}
-	} finally {
-		submitting.value = false
-	}
+  submitting.value = true
+  try {
+    await authStore.loginUser({ email: form.email, password: form.password })
+    const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
+    await router.push(redirect)
+    ElMessage.success('Welcome back!')
+  } catch (error) {
+    if (error instanceof ApiError) {
+      ElMessage.error(error.message)
+    } else {
+      console.error('Login failed', error)
+      ElMessage.error('Unable to sign in. Please try again.')
+    }
+  } finally {
+    submitting.value = false
+  }
 }
 </script>
 
