@@ -1,11 +1,6 @@
 import { ApiError } from './types'
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL && import.meta.env.VITE_API_BASE_URL.length > 0
-    ? import.meta.env.VITE_API_BASE_URL
-    : import.meta.env.DEV
-      ? 'http://localhost:4000'
-      : ''
+const PUBLIC_API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL
 
 type HttpOptions = RequestInit & {
   parse?: 'json' | 'text'
@@ -14,7 +9,7 @@ type HttpOptions = RequestInit & {
 export async function http<TResponse = unknown>(path: string, options: HttpOptions = {}): Promise<TResponse> {
   const { headers, parse, ...rest } = options
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const response = await fetch(`${PUBLIC_API_BASE_URL}${path}`, {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',

@@ -4,13 +4,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rsbuild build",
     "check": "biome check --write",
-    "dev": "rsbuild dev --open",
     "format": "biome format --write",
+    "build": "rsbuild build --env-mode production",
+    "dev": "rsbuild dev --env-mode development --open",
     "preview": "rsbuild preview",
-    "server:dev": "bun run --watch server/src/index.ts",
-    "server:build": "bun build server/src/index.ts --compile --outfile server/dist/server",
+    "server:dev": "NODE_ENV=development && bun run --watch server/src/index.ts",
+    "server:build": "NODE_ENV=production && bun build server/src/index.ts --compile --outfile server/dist/server",
     "server:start": "server/dist/server",
     "db:migrate": "bun run server/scripts/run-migrations.ts"
   },

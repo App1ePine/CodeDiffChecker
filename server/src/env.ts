@@ -1,18 +1,22 @@
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { config } from 'dotenv'
+import type { DotenvConfigOptions } from 'dotenv'
+import dotenv from 'dotenv'
 import { z } from 'zod'
 
-const candidateEnvPaths = [resolve(process.cwd(), 'server/.env'), resolve(process.cwd(), '.env')]
+const mode = process.env.NODE_ENV ?? 'development'
 
-for (const envPath of candidateEnvPaths) {
-  if (existsSync(envPath)) {
-    config({ path: envPath })
-  }
+const loadEnvFile = (relativePath: string, options?: DotenvConfigOptions) => {
+  const envPath = resolve(process.cwd(), relativePath)
+  if (!existsSync(envPath)) return
+  dotenv.config({ path: envPath, ...options })
 }
+loadEnvFile('server/.env')
+loadEnvFile(`server/.env.${mode}`)
+loadEnvFile('server/.env.local', { override: true })
 
 const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  NODE_ENV: z.enum(['development', 'production']).default('development'),
   PORT: z.coerce.number().default(4000),
   DB_HOST: z.string(),
   DB_PORT: z.coerce.number().default(3306),

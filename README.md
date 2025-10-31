@@ -22,17 +22,16 @@ yarn install
 
 ### 2. Configure environment variables
 
-#### Frontend (`.env` at repo root)
-Copy `.env.example` to `.env` and set:
+#### Frontend (`.env.*` at repo root)
+The repo ships `.env.development` (used by `yarn dev`) and `.env.production` (used by `yarn build --env-mode production`/`yarn preview`). Both expose the same browser-visible variable:
 
 ```ini
-VITE_API_BASE_URL=http://localhost:4000  # URL of the Hono server
-# existing deployment vars can remain if you use them
+PUBLIC_API_BASE_URL=http://localhost:4000  # API origin the frontend should call
 ```
-If the API and frontend are served from the same origin you can omit `VITE_API_BASE_URL`.
+Point it at your API server; if the frontend and backend share an origin you can omit it. Rsbuild only injects variables prefixed with `PUBLIC_`, so keep that prefix when adding new client-side flags. You can create `.env.local` to override values without committing them.
 
-#### Backend (`server/.env`)
-Copy `server/.env.example` to `server/.env` and adjust for your MariaDB instance:
+#### Backend (`server/.env.*`)
+Server configs live alongside the API source. Copy `server/.env.example` to the mode-specific file you need (e.g. `server/.env.development`, `server/.env.production`, or `server/.env.local`) and update the fields for your MariaDB instance and deployment details:
 
 ```ini
 NODE_ENV=development
@@ -47,6 +46,7 @@ TOKEN_EXPIRES_IN=7d
 FRONTEND_ORIGIN=http://localhost:3001
 SHARE_BASE_URL=http://localhost:3001
 ```
+Production builds follow the same shape—just swap in your real secrets, database credentials, and public origins.
 
 ### 3. Prepare the database
 1. Create the database/user in MariaDB if needed.
