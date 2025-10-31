@@ -5,7 +5,7 @@ import { pool, query, queryOne } from '../db'
 import { env } from '../env'
 import { requireAuth } from '../middleware/auth'
 import type { AppVariables } from '../types'
-import { mysqlDateToIsoString, toMySqlDateTime } from '../utils/datetime'
+import { epochSecondsToIsoString, toEpochSeconds } from '../utils/datetime'
 import { createShareSlug } from '../utils/slug'
 
 type AppEnv = {
@@ -20,9 +20,10 @@ type DbShare = {
   left_content: string
   right_content: string
   hidden: number
-  expires_at: Date | null
-  created_at: Date
-  updated_at: Date
+  expires_at: number | string | null
+  created_at: number | string
+  updated_at: number | string
+  deleted_at: number | string | null
 }
 
 const router = new Hono<AppEnv>()
@@ -58,7 +59,10 @@ router.use('*', requireAuth)
 
 router.get('/', async (c) => {
   const userId = c.get('userId')
-  const shares = await query<DbShare>('SELECT * FROM shares WHERE user_id = ? ORDER BY created_at DESC', [userId])
+  const shares = await query<DbShare>(
+    'SELECT * FROM shares WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
+    [userId]
+  )
 
   return c.json({
     shares: shares.map((share) => ({
@@ -66,9 +70,9 @@ router.get('/', async (c) => {
       slug: share.slug,
       title: share.title,
       hidden: share.hidden === 1,
-      expiresAt: mysqlDateToIsoString(share.expires_at),
-      createdAt: mysqlDateToIsoString(share.created_at)!,
-      updatedAt: mysqlDateToIsoString(share.updated_at)!,
+      expiresAt: epochSecondsToIsoString(share.expires_at),
+      createdAt: epochSecondsToIsoString(share.created_at),
+      updatedAt: epochSecondsToIsoString(share.updated_at),
       url: `${env.SHARE_BASE_URL}/shares/${share.slug}`,
     })),
   })
@@ -83,14 +87,15 @@ router.post('/', async (c) => {
   }
 
   const { hidden, leftContent, rightContent, title, expiresAt } = parsed.data
-  const expiresAtSql = expiresAt ? toMySqlDateTime(expiresAt) : null
+  const expiresAtSeconds = expiresAt ? toEpochSeconds(expiresAt) : null
+  const expiresAtIso = expiresAtSeconds === null ? null : epochSecondsToIsoString(expiresAtSeconds)
 
   const slug = await reserveUniqueSlug()
 
   const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO shares (user_id, slug, title, left_content, right_content, hidden, expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [userId, slug, title, leftContent, rightContent, hidden ? 1 : 0, expiresAtSql]
+    `INSERT INTO shares (user_id, slug, title, left_content, right_content, hidden, expires_at, created_at, updated_at, deleted_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, UNIX_TIMESTAMP(), UNIX_TIMESTAMP(), NULL)`,
+    [userId, slug, title, leftContent, rightContent, hidden ? 1 : 0, expiresAtSeconds]
   )
 
   return c.json({
@@ -99,7 +104,7 @@ router.post('/', async (c) => {
       slug,
       title,
       hidden,
-      expiresAt: expiresAt ? expiresAt.toISOString() : null,
+      expiresAt: expiresAtIso,
       url: `${env.SHARE_BASE_URL}/shares/${slug}`,
     },
   })
@@ -118,7 +123,10 @@ router.patch('/:id', async (c) => {
 
   const userId = c.get('userId')
 
-  const share = await queryOne<DbShare>('SELECT * FROM shares WHERE id = ? AND user_id = ?', [shareId, userId])
+  const share = await queryOne<DbShare>('SELECT * FROM shares WHERE id = ? AND user_id = ? AND deleted_at IS NULL', [
+    shareId,
+    userId,
+  ])
 
   if (!share) {
     return c.json({ error: 'Share not found' }, 404)
@@ -139,7 +147,7 @@ router.patch('/:id', async (c) => {
 
   if (parsed.data.expiresAt !== undefined) {
     updates.push('expires_at = ?')
-    params.push(parsed.data.expiresAt ? toMySqlDateTime(parsed.data.expiresAt) : null)
+    params.push(parsed.data.expiresAt ? toEpochSeconds(parsed.data.expiresAt) : null)
   }
 
   if (updates.length === 0) {
@@ -148,9 +156,15 @@ router.patch('/:id', async (c) => {
 
   params.push(shareId, userId)
 
-  await pool.execute(`UPDATE shares SET ${updates.join(', ')}, updated_at = NOW() WHERE id = ? AND user_id = ?`, params)
+  await pool.execute(
+    `UPDATE shares SET ${updates.join(', ')}, updated_at = UNIX_TIMESTAMP() WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    params
+  )
 
-  const updated = await queryOne<DbShare>('SELECT * FROM shares WHERE id = ? AND user_id = ?', [shareId, userId])
+  const updated = await queryOne<DbShare>('SELECT * FROM shares WHERE id = ? AND user_id = ? AND deleted_at IS NULL', [
+    shareId,
+    userId,
+  ])
 
   if (!updated) {
     return c.json({ error: 'Share not found after update' }, 404)
@@ -162,9 +176,9 @@ router.patch('/:id', async (c) => {
       slug: updated.slug,
       title: updated.title,
       hidden: updated.hidden === 1,
-      expiresAt: mysqlDateToIsoString(updated.expires_at),
-      createdAt: mysqlDateToIsoString(updated.created_at)!,
-      updatedAt: mysqlDateToIsoString(updated.updated_at)!,
+      expiresAt: epochSecondsToIsoString(updated.expires_at),
+      createdAt: epochSecondsToIsoString(updated.created_at),
+      updatedAt: epochSecondsToIsoString(updated.updated_at),
       url: `${env.SHARE_BASE_URL}/shares/${updated.slug}`,
     },
   })
@@ -178,10 +192,10 @@ router.delete('/:id', async (c) => {
 
   const userId = c.get('userId')
 
-  const [result] = await pool.execute<ResultSetHeader>('DELETE FROM shares WHERE id = ? AND user_id = ?', [
-    shareId,
-    userId,
-  ])
+  const [result] = await pool.execute<ResultSetHeader>(
+    'UPDATE shares SET deleted_at = UNIX_TIMESTAMP(), updated_at = UNIX_TIMESTAMP() WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+    [shareId, userId]
+  )
 
   if (result.affectedRows === 0) {
     return c.json({ error: 'Share not found' }, 404)

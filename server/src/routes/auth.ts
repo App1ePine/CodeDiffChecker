@@ -8,6 +8,7 @@ import { pool, queryOne } from '../db'
 import { COOKIE_NAME, env } from '../env'
 import { requireAuth } from '../middleware/auth'
 import type { AppVariables } from '../types'
+import { epochSecondsToIsoString } from '../utils/datetime'
 import { durationToSeconds } from '../utils/duration'
 import { hashPassword, verifyPassword } from '../utils/password'
 
@@ -20,8 +21,8 @@ type DbUser = {
   email: string
   display_name: string
   password_hash: string
-  created_at: Date
-  updated_at: Date
+  created_at: number | string
+  updated_at: number | string
 }
 
 const router = new Hono<AppEnv>()
@@ -77,7 +78,7 @@ router.post('/register', async (c) => {
   const passwordHash = await hashPassword(password)
 
   const [result] = await pool.execute<ResultSetHeader>(
-    'INSERT INTO users (email, password_hash, display_name) VALUES (?, ?, ?)',
+    'INSERT INTO users (email, password_hash, display_name, created_at, updated_at) VALUES (?, ?, ?, UNIX_TIMESTAMP(), UNIX_TIMESTAMP())',
     [email, passwordHash, displayName]
   )
 
@@ -158,8 +159,8 @@ router.get('/me', requireAuth, async (c) => {
       id: user.id,
       email: user.email,
       displayName: user.display_name,
-      createdAt: user.created_at,
-      updatedAt: user.updated_at,
+      createdAt: epochSecondsToIsoString(user.created_at),
+      updatedAt: epochSecondsToIsoString(user.updated_at),
     },
   })
 })

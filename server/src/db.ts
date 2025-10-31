@@ -21,7 +21,7 @@ export async function query<T = unknown>(sql: string, params?: unknown[]): Promi
   return rows as T[]
 }
 
-export async function queryOne<T = unknown>(sql: string, params?: unknown[]): Promise<T | null> {
+export async function queryOne<T = unknown>(sql: string, params?: unknown[]): Promise<T | undefined> {
   const rows = await query<T>(sql, params)
-  return rows.length > 0 ? rows[0]! : null
+  return rows.length > 0 ? rows[0] : undefined
 }

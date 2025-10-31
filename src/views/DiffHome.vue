@@ -7,7 +7,7 @@ import { computed, reactive, ref } from 'vue'
 import { createShare } from '@/api/shares'
 import { ApiError } from '@/api/types'
 import { useAuthStore } from '@/stores/auth'
-import { parseDatePickerString } from '@/utils/datetime'
+import { formatDate, parseDatePickerString } from '@/utils/datetime'
 
 const sampleLeft = `import { createApp } from 'vue'
 import App from './App.vue'
@@ -81,7 +81,7 @@ function openShareDialog() {
   }
   shareForm.title = `Diff ${new Date().toLocaleString()}`
   shareForm.hidden = false
-  shareForm.expiresAt = null
+  shareForm.expiresAt = formatDate(new Date())
   shareDialogVisible.value = true
 }
 

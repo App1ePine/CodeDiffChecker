@@ -1,9 +1,9 @@
 const UNIT_IN_SECONDS: Record<string, number> = {
   s: 1,
   m: 60,
-  h: 60 * 60,
-  d: 60 * 60 * 24,
-  w: 60 * 60 * 24 * 7,
+  h: 3600,
+  d: 86400,
+  w: 604800,
 }
 
 export function durationToSeconds(input: string): number {

@@ -9,11 +9,10 @@
     "dev": "rsbuild dev --open",
     "format": "biome format --write",
     "preview": "rsbuild preview",
-    "deploy": "yarn build && sh ./scripts/deploy.sh",
-    "server:dev": "tsx watch server/src/index.ts",
-    "server:build": "tsc -p server/tsconfig.json",
-    "server:start": "node --enable-source-maps server/dist/index.js",
-    "db:migrate": "tsx server/scripts/run-migrations.ts"
+    "server:dev": "bun run --watch server/src/index.ts",
+    "server:build": "bun build server/src/index.ts --compile --outfile server/dist/server",
+    "server:start": "server/dist/server",
+    "db:migrate": "bun run server/scripts/run-migrations.ts"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

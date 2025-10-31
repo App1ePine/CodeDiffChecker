@@ -16,5 +16,5 @@ dist/
 !.vscode/extensions.json
 
 *.lock
-.yarn/cache
-.yarn/global
+.yarn
+!.yarn/releases
