@@ -13,7 +13,7 @@ export default defineConfig({
       root: 'dist',
       html: './',
     },
-    assetPrefix: './',
+    assetPrefix: '/',
     cleanDistPath: true,
     // inlineScripts: true,
     // inlineStyles: true,
