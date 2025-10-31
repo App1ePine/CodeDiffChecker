@@ -8,7 +8,7 @@ const authStore = useAuthStore()
 const router = useRouter()
 const route = useRoute()
 
-const displayName = computed(() => authStore.user?.displayName ?? authStore.user?.email ?? '')
+const userLabel = computed(() => authStore.user?.nickname ?? authStore.user?.username ?? authStore.user?.email ?? '')
 
 const navigationLinks = computed(() => [
   { to: { name: 'home' }, label: 'Compare', requiresAuth: false },
@@ -53,7 +53,7 @@ async function handleLogout() {
 			<div class="auth-section">
 				<template v-if="authStore.isAuthenticated">
 					<span class="user-chip" title="Signed in">
-						{{ displayName }}
+						{{ userLabel }}
 					</span>
 					<el-button size="small" type="primary" plain @click="handleLogout">Sign out</el-button>
 				</template>

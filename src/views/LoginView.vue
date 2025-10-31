@@ -13,17 +13,29 @@ const authStore = useAuthStore()
 const formRef = ref<FormInstance | null>(null)
 const submitting = ref(false)
 
+const usernamePattern = /^[a-zA-Z0-9_]+$/
+
 const form = reactive({
-  email: '',
+  username: '',
   password: '',
 })
 
 const rules: FormRules = {
-  email: [
-    { required: true, message: 'Email is required', trigger: 'blur' },
-    { type: 'email', message: 'Please enter a valid email address', trigger: 'blur' },
+  username: [
+    { required: true, message: 'Username is required', trigger: 'blur' },
+    { min: 3, message: 'Username should be at least 3 characters', trigger: 'blur' },
+    { max: 12, message: 'Username cannot exceed 12 characters', trigger: 'blur' },
+    {
+      pattern: usernamePattern,
+      message: 'Username may only contain letters, numbers, and underscores',
+      trigger: 'blur',
+    },
   ],
-  password: [{ required: true, message: 'Password is required', trigger: 'blur' }],
+  password: [
+    { required: true, message: 'Password is required', trigger: 'blur' },
+    { min: 6, message: 'Password must be at least 6 characters', trigger: 'blur' },
+    { max: 24, message: 'Password cannot exceed 24 characters', trigger: 'blur' },
+  ],
 }
 
 async function handleSubmit() {
@@ -34,11 +46,11 @@ async function handleSubmit() {
 
   submitting.value = true
   try {
-    await authStore.loginUser({ email: form.email, password: form.password })
+    await authStore.loginUser({ username: form.username, password: form.password })
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     await router.push(redirect)
     ElMessage.success('Welcome back!')
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof ApiError) {
       ElMessage.error(error.message)
     } else {
@@ -58,12 +70,12 @@ async function handleSubmit() {
 			<p class="hint">Access your saved diffs and manage share links.</p>
 
 			<el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleSubmit">
-				<el-form-item label="Email" prop="email">
-					<el-input v-model="form.email" autocomplete="email" placeholder="you@example.com" />
+				<el-form-item label="Username" prop="username">
+					<el-input v-model="form.username" autocomplete="username" placeholder="Your username" />
 				</el-form-item>
 
 				<el-form-item label="Password" prop="password">
-					<el-input v-model="form.password" autocomplete="current-password" show-password type="password" />
+					<el-input v-model="form.password" autocomplete="current-password" show-password type="password" placeholder="Your password" />
 				</el-form-item>
 
 				<el-form-item>

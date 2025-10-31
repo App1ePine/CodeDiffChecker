@@ -23,7 +23,7 @@ router.get('/shares/:slug', async (c) => {
     `
       SELECT 
         s.*, 
-        u.display_name as owner_name
+        u.nickname as owner_name
       FROM shares s
       INNER JOIN users u ON u.id = s.user_id
       WHERE s.slug = ?

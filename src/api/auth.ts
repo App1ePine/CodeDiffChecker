@@ -2,14 +2,16 @@ import { http } from './http'
 import type { User } from './types'
 
 export type LoginPayload = {
-  email: string
+  username: string
   password: string
 }
 
 export type RegisterPayload = {
+  username: string
   email: string
   password: string
-  displayName: string
+  confirmPassword: string
+  nickname: string
 }
 
 export type LoginResponse = {

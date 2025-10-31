@@ -11,6 +11,7 @@ type AppEnv = {
 type TokenPayload = {
   sub: string
   email: string
+  username: string
 }
 
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
@@ -23,6 +24,7 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
     const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload
     c.set('userId', Number.parseInt(payload.sub, 10))
     c.set('userEmail', payload.email)
+    c.set('userName', payload.username)
     await next()
   } catch (error) {
     console.error('Token verification failed', error)
