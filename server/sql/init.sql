@@ -26,3 +26,13 @@ CREATE TABLE IF NOT EXISTS shares (
 CREATE INDEX idx_shares_user_id ON shares (user_id);
 CREATE INDEX idx_shares_expires_at ON shares (expires_at);
 CREATE INDEX idx_shares_deleted_at ON shares (deleted_at);
+
+INSERT INTO users (username, email, password_hash, nickname, created_at, updated_at)
+VALUES ('admin',
+        'admin@example.com',
+        '$2a$10$fi5eHDfbZLAfjrNI6a93x.rz7e2ljd90ExbI4.vOhxU4uH/C2z4oS',
+        '系统管理员',
+        UNIX_TIMESTAMP(),
+        UNIX_TIMESTAMP())
+ON DUPLICATE KEY UPDATE nickname   = VALUES(nickname),
+                        updated_at = UNIX_TIMESTAMP();

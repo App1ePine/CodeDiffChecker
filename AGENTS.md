@@ -14,5 +14,5 @@
 
 AI 在回答任何问题之前，**必须遵循以下思考流程：**
 
-1. **使用 `Sequential_Thinking` 工具**
-2. **使用 `context7` 工具**
+1. **必须使用 `Sequential_Thinking` MCP 工具**
+2. **如果项目所使用的包版本高于 AI 知识库中的版本，请使用 `context7` 工具查看项目所用版本的文档**

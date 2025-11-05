@@ -12,7 +12,10 @@
     "server:dev": "NODE_ENV=development && bun run --watch server/src/index.ts",
     "server:build": "NODE_ENV=production && bun build server/src/index.ts --compile --outfile server/dist/server",
     "server:start": "server/dist/server",
-    "db:migrate": "NODE_ENV=production && bun run server/scripts/run-migrations.ts"
+    "db:create": "bun run server/scripts/db-create.ts",
+    "db:init": "bun run server/scripts/db-init.ts",
+    "db:export": "bun run server/scripts/db-export.ts",
+    "db:import": "bun run server/scripts/db-import.ts"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",

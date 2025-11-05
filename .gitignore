@@ -4,10 +4,12 @@
 *.log*
 .env.production
 .env.development
+.env.local
 
 # Dist
 node_modules
 dist/
+server/backups/
 
 # Profile
 .rspack-profile-*/
@@ -15,6 +17,7 @@ dist/
 # IDE
 .vscode/*
 !.vscode/extensions.json
+.idea/
 
 *.lock
 .yarn
