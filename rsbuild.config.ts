@@ -30,9 +30,12 @@ export default defineConfig({
   },
   server: {
     base: '/',
-    host: '0.0.0.0',
+    host: 'localhost',
     open: true,
     port: 3001,
+    proxy: {
+      '/api': 'http://localhost:4000',
+    },
   },
   performance: {
     removeConsole: true,

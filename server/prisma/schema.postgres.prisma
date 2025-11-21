@@ -1,0 +1,45 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/client-pg"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement())
+  username      String   @unique @db.VarChar(50)
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @map("password_hash") @db.VarChar(255)
+  nickname      String   @db.VarChar(100)
+  created_at    Int      @default(0)
+  updated_at    Int      @default(0)
+
+  shares        Share[]
+
+  @@map("users")
+}
+
+model Share {
+  id            Int      @id @default(autoincrement())
+  user_id       Int
+  slug          String   @unique @db.VarChar(32)
+  title         String   @db.VarChar(255)
+  left_content  String
+  right_content String
+  hidden        Boolean  @default(false)
+  expires_at    Int?
+  created_at    Int      @default(0)
+  updated_at    Int      @default(0)
+  deleted_at    Int?
+
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@index([deleted_at])
+  @@map("shares")
+}

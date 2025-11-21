@@ -1,7 +1,5 @@
 import { ApiError } from './types'
 
-const PUBLIC_API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL
-
 type HttpOptions = RequestInit & {
   parse?: 'json' | 'text'
 }
@@ -9,7 +7,7 @@ type HttpOptions = RequestInit & {
 export async function http<TResponse = unknown>(path: string, options: HttpOptions = {}): Promise<TResponse> {
   const { headers, parse, ...rest } = options
 
-  const response = await fetch(`${PUBLIC_API_BASE_URL}${path}`, {
+  const response = await fetch(path, {
     credentials: 'include',
     headers: {
       'Content-Type': 'application/json',

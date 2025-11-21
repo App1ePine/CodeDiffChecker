@@ -21,6 +21,9 @@ export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   try {
+    if (!env.JWT_SECRET) {
+      throw new Error('JWT_SECRET is not configured')
+    }
     const payload = jwt.verify(token, env.JWT_SECRET) as TokenPayload
     c.set('userId', Number.parseInt(payload.sub, 10))
     c.set('userEmail', payload.email)

@@ -1,0 +1,45 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/client-mysql"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  username      String   @unique @db.VarChar(50)
+  email         String   @unique @db.VarChar(255)
+  password_hash String   @map("password_hash") @db.VarChar(255)
+  nickname      String   @db.VarChar(100)
+  created_at    Int      @default(0) @db.UnsignedInt
+  updated_at    Int      @default(0) @db.UnsignedInt
+
+  shares        Share[]
+
+  @@map("users")
+}
+
+model Share {
+  id            Int      @id @default(autoincrement()) @db.UnsignedInt
+  user_id       Int      @db.UnsignedInt
+  slug          String   @unique @db.VarChar(32)
+  title         String   @db.VarChar(255)
+  left_content  String   @db.MediumText
+  right_content String   @db.MediumText
+  hidden        Boolean  @default(false)
+  expires_at    Int?     @db.UnsignedInt
+  created_at    Int      @default(0) @db.UnsignedInt
+  updated_at    Int      @default(0) @db.UnsignedInt
+  deleted_at    Int?     @db.UnsignedInt
+
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@index([deleted_at])
+  @@map("shares")
+}

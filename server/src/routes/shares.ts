@@ -1,7 +1,6 @@
 import { Hono } from 'hono'
-import type { ResultSetHeader } from 'mysql2'
 import { z } from 'zod'
-import { pool, query, queryOne } from '../db'
+import { getDb } from '../db'
 import { env } from '../env'
 import { requireAuth } from '../middleware/auth'
 import type { AppVariables } from '../types'
@@ -10,20 +9,6 @@ import { createShareSlug } from '../utils/slug'
 
 type AppEnv = {
   Variables: AppVariables
-}
-
-type DbShare = {
-  id: number
-  user_id: number
-  slug: string
-  title: string
-  left_content: string
-  right_content: string
-  hidden: number
-  expires_at: number | string | null
-  created_at: number | string
-  updated_at: number | string
-  deleted_at: number | string | null
 }
 
 const router = new Hono<AppEnv>()
@@ -59,17 +44,18 @@ router.use('*', requireAuth)
 
 router.get('/', async (c) => {
   const userId = c.get('userId')
-  const shares = await query<DbShare>(
-    'SELECT * FROM shares WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC',
-    [userId]
-  )
+  const db = getDb()
+  const shares = await db.share.findMany({
+    where: { user_id: userId, deleted_at: null },
+    orderBy: { created_at: 'desc' },
+  })
 
   return c.json({
     shares: shares.map((share) => ({
       id: share.id,
       slug: share.slug,
       title: share.title,
-      hidden: share.hidden === 1,
+      hidden: share.hidden,
       expiresAt: epochSecondsToIsoString(share.expires_at),
       createdAt: epochSecondsToIsoString(share.created_at),
       updatedAt: epochSecondsToIsoString(share.updated_at),
@@ -91,16 +77,25 @@ router.post('/', async (c) => {
   const expiresAtIso = expiresAtSeconds === null ? null : epochSecondsToIsoString(expiresAtSeconds)
 
   const slug = await reserveUniqueSlug()
+  const db = getDb()
 
-  const [result] = await pool.execute<ResultSetHeader>(
-    `INSERT INTO shares (user_id, slug, title, left_content, right_content, hidden, expires_at, created_at, updated_at, deleted_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, UNIX_TIMESTAMP(), UNIX_TIMESTAMP(), NULL)`,
-    [userId, slug, title, leftContent, rightContent, hidden ? 1 : 0, expiresAtSeconds]
-  )
+  const share = await db.share.create({
+    data: {
+      user_id: userId,
+      slug,
+      title,
+      left_content: leftContent,
+      right_content: rightContent,
+      hidden,
+      expires_at: expiresAtSeconds,
+      created_at: Math.floor(Date.now() / 1000),
+      updated_at: Math.floor(Date.now() / 1000),
+    },
+  })
 
   return c.json({
     share: {
-      id: Number(result.insertId),
+      id: share.id,
       slug,
       title,
       hidden,
@@ -122,60 +117,48 @@ router.patch('/:id', async (c) => {
   }
 
   const userId = c.get('userId')
+  const db = getDb()
 
-  const share = await queryOne<DbShare>('SELECT * FROM shares WHERE id = ? AND user_id = ? AND deleted_at IS NULL', [
-    shareId,
-    userId,
-  ])
+  const share = await db.share.findFirst({
+    where: { id: shareId, user_id: userId, deleted_at: null },
+  })
 
   if (!share) {
     return c.json({ error: 'Share not found' }, 404)
   }
 
-  const updates: string[] = []
-  const params: unknown[] = []
+  type ShareUpdateData = {
+    updated_at: number
+    title?: string
+    hidden?: boolean
+    expires_at?: number | null
+  }
+
+  const data: ShareUpdateData = { updated_at: Math.floor(Date.now() / 1000) }
 
   if (parsed.data.title !== undefined) {
-    updates.push('title = ?')
-    params.push(parsed.data.title)
+    data.title = parsed.data.title
   }
 
   if (parsed.data.hidden !== undefined) {
-    updates.push('hidden = ?')
-    params.push(parsed.data.hidden ? 1 : 0)
+    data.hidden = parsed.data.hidden
   }
 
   if (parsed.data.expiresAt !== undefined) {
-    updates.push('expires_at = ?')
-    params.push(parsed.data.expiresAt ? toEpochSeconds(parsed.data.expiresAt) : null)
+    data.expires_at = parsed.data.expiresAt ? toEpochSeconds(parsed.data.expiresAt) : null
   }
 
-  if (updates.length === 0) {
-    return c.json({ error: 'Nothing to update' }, 400)
-  }
-
-  params.push(shareId, userId)
-
-  await pool.execute(
-    `UPDATE shares SET ${updates.join(', ')}, updated_at = UNIX_TIMESTAMP() WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
-    params
-  )
-
-  const updated = await queryOne<DbShare>('SELECT * FROM shares WHERE id = ? AND user_id = ? AND deleted_at IS NULL', [
-    shareId,
-    userId,
-  ])
-
-  if (!updated) {
-    return c.json({ error: 'Share not found after update' }, 404)
-  }
+  const updated = await db.share.update({
+    where: { id: shareId },
+    data,
+  })
 
   return c.json({
     share: {
       id: updated.id,
       slug: updated.slug,
       title: updated.title,
-      hidden: updated.hidden === 1,
+      hidden: updated.hidden,
       expiresAt: epochSecondsToIsoString(updated.expires_at),
       createdAt: epochSecondsToIsoString(updated.created_at),
       updatedAt: epochSecondsToIsoString(updated.updated_at),
@@ -191,13 +174,17 @@ router.delete('/:id', async (c) => {
   }
 
   const userId = c.get('userId')
+  const db = getDb()
 
-  const [result] = await pool.execute<ResultSetHeader>(
-    'UPDATE shares SET deleted_at = UNIX_TIMESTAMP(), updated_at = UNIX_TIMESTAMP() WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
-    [shareId, userId]
-  )
+  const result = await db.share.updateMany({
+    where: { id: shareId, user_id: userId, deleted_at: null },
+    data: {
+      deleted_at: Math.floor(Date.now() / 1000),
+      updated_at: Math.floor(Date.now() / 1000),
+    },
+  })
 
-  if (result.affectedRows === 0) {
+  if (result.count === 0) {
     return c.json({ error: 'Share not found' }, 404)
   }
 
@@ -208,9 +195,10 @@ export default router
 
 async function reserveUniqueSlug(): Promise<string> {
   let attempts = 0
+  const db = getDb()
   while (attempts < 5) {
     const slugCandidate = createShareSlug()
-    const existing = await queryOne<Pick<DbShare, 'id'>>('SELECT id FROM shares WHERE slug = ?', [slugCandidate])
+    const existing = await db.share.findUnique({ where: { slug: slugCandidate }, select: { id: true } })
     if (!existing) {
       return slugCandidate
     }

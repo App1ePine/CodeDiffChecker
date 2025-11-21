@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import DashboardView from '@/views/DashboardView.vue'
 import DiffHome from '@/views/DiffHome.vue'
+import InstallView from '@/views/Install.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import ShareViewer from '@/views/ShareViewer.vue'
@@ -40,6 +41,12 @@ const router = createRouter({
       meta: { title: 'Shared Diff' },
     },
     {
+      path: '/install',
+      name: 'install',
+      component: InstallView,
+      meta: { title: 'Installation' },
+    },
+    {
       path: '/:pathMatch(.*)*',
       redirect: '/',
     },
@@ -53,19 +60,46 @@ router.beforeEach(async (to, _from, next) => {
     await authStore.bootstrap()
   }
 
+  // 检查安装状态
+  if (to.name !== 'install') {
+    try {
+      const res = await fetch('/api/install/status')
+      if (res.ok) {
+        const data = await res.json()
+        if (!data.installed) {
+          return next({ name: 'install' })
+        }
+      } else {
+        // 非 2xx 响应视为未安装
+        return next({ name: 'install' })
+      }
+    } catch (e) {
+      // 请求失败视为未安装
+      return next({ name: 'install' })
+    }
+  } else {
+    // 进入安装前，检查是否已安装，已安装则跳转首页
+    try {
+      const res = await fetch('/api/install/status')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.installed) {
+          return next({ name: 'home' })
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 鉴权检查
   if (to.meta?.requiresAuth && !authStore.isAuthenticated) {
-    next({
-      name: 'login',
-      query: { redirect: to.fullPath },
-    })
-    return
+    return next({ name: 'login', query: { redirect: to.fullPath } })
   }
 
   if (to.meta?.requiresGuest && authStore.isAuthenticated) {
-    next({ name: 'dashboard' })
-    return
+    return next({ name: 'dashboard' })
   }
 
+  // 设置页面标题
   if (to.meta?.title) {
     document.title = `Code Diff Checker - ${String(to.meta.title)}`
   } else {

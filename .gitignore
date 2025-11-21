@@ -5,6 +5,8 @@
 .env.production
 .env.development
 .env.local
+server/.env
+server/src/generated/
 
 # Dist
 node_modules

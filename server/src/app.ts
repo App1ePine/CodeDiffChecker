@@ -1,8 +1,9 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { logger } from 'hono/logger'
-import { env } from './env'
+import { env, isInstalled } from './env'
 import authRoutes from './routes/auth'
+import installRoutes from './routes/install'
 import publicRoutes from './routes/public'
 import shareRoutes from './routes/shares'
 import type { AppVariables } from './types'
@@ -30,6 +31,9 @@ app.use(
 )
 
 app.use('/api/*', async (c, next) => {
+  if (!isInstalled && !c.req.path.startsWith('/api/install')) {
+    return c.json({ error: 'App not installed', installed: false }, 503)
+  }
   await next()
   if (!c.res.headers.has('Cache-Control')) {
     c.header('Cache-Control', 'no-store, max-age=0')
@@ -41,5 +45,6 @@ app.get('/health', (c) => c.json({ status: 'ok' }))
 app.route('/api/auth', authRoutes)
 app.route('/api/shares', shareRoutes)
 app.route('/api/public', publicRoutes)
+app.route('/api/install', installRoutes)
 
 export default app

@@ -2,9 +2,8 @@ import { Hono } from 'hono'
 import { deleteCookie, setCookie } from 'hono/cookie'
 import type { JwtPayload, SignOptions } from 'jsonwebtoken'
 import jwt from 'jsonwebtoken'
-import type { ResultSetHeader } from 'mysql2'
 import { z } from 'zod'
-import { pool, queryOne } from '../db'
+import { getDb } from '../db'
 import { COOKIE_NAME, env } from '../env'
 import { requireAuth } from '../middleware/auth'
 import type { AppVariables } from '../types'
@@ -14,16 +13,6 @@ import { hashPassword, verifyPassword } from '../utils/password'
 
 type AppEnv = {
   Variables: AppVariables
-}
-
-type DbUser = {
-  id: number
-  username: string
-  email: string
-  nickname: string
-  password_hash: string
-  created_at: number | string
-  updated_at: number | string
 }
 
 const router = new Hono<AppEnv>()
@@ -79,6 +68,10 @@ function createToken(user: { id: number; username: string; email: string }) {
     expiresIn: tokenLifetimeSeconds,
   }
 
+  if (!env.JWT_SECRET) {
+    throw new Error('JWT_SECRET is not configured')
+  }
+
   return jwt.sign(payload, env.JWT_SECRET, options)
 }
 
@@ -89,30 +82,30 @@ router.post('/register', async (c) => {
   }
 
   const { username, email, password, nickname } = parsed.data
+  const db = getDb()
 
-  const existingUsername = await queryOne<Pick<DbUser, 'id'>>('SELECT id FROM users WHERE username = ?', [username])
+  const existingUsername = await db.user.findUnique({ where: { username }, select: { id: true } })
   if (existingUsername) {
     return c.json({ error: 'Username already in use' }, 409)
   }
 
-  const existingEmail = await queryOne<Pick<DbUser, 'id'>>('SELECT id FROM users WHERE email = ?', [email])
+  const existingEmail = await db.user.findUnique({ where: { email }, select: { id: true } })
   if (existingEmail) {
     return c.json({ error: 'Email already in use' }, 409)
   }
 
   const passwordHash = await hashPassword(password)
 
-  const [result] = await pool.execute<ResultSetHeader>(
-    'INSERT INTO users (username, email, password_hash, nickname, created_at, updated_at) VALUES (?, ?, ?, ?, UNIX_TIMESTAMP(), UNIX_TIMESTAMP())',
-    [username, email, passwordHash, nickname]
-  )
-
-  const user = {
-    id: Number(result.insertId),
-    username,
-    email,
-    nickname,
-  }
+  const user = await db.user.create({
+    data: {
+      username,
+      email,
+      password_hash: passwordHash,
+      nickname,
+      created_at: Math.floor(Date.now() / 1000),
+      updated_at: Math.floor(Date.now() / 1000),
+    },
+  })
 
   const token = createToken(user)
 
@@ -124,7 +117,7 @@ router.post('/register', async (c) => {
     maxAge: tokenLifetimeSeconds,
   })
 
-  return c.json({ user })
+  return c.json({ user: { id: user.id, username: user.username, email: user.email, nickname: user.nickname } })
 })
 
 router.post('/login', async (c) => {
@@ -134,8 +127,9 @@ router.post('/login', async (c) => {
   }
 
   const { username, password } = parsed.data
+  const db = getDb()
 
-  const user = await queryOne<DbUser>('SELECT * FROM users WHERE username = ?', [username])
+  const user = await db.user.findUnique({ where: { username } })
   if (!user) {
     return c.json({ error: 'Invalid username or password' }, 401)
   }
@@ -172,10 +166,12 @@ router.post('/logout', (c) => {
 
 router.get('/me', requireAuth, async (c) => {
   const userId = c.get('userId')
-  const user = await queryOne<Omit<DbUser, 'password_hash'>>(
-    'SELECT id, username, email, nickname, created_at, updated_at FROM users WHERE id = ?',
-    [userId]
-  )
+  const db = getDb()
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { id: true, username: true, email: true, nickname: true, created_at: true, updated_at: true },
+  })
 
   if (!user) {
     return c.json({ error: 'User not found' }, 404)
