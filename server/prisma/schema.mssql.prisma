@@ -1,0 +1,46 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/client-mssql"
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int      @id @default(autoincrement()) @db.Int
+  username      String   @unique @db.NVarChar(50)
+  email         String   @unique @db.NVarChar(255)
+  password_hash String   @map("password_hash") @db.NVarChar(255)
+  nickname      String   @db.NVarChar(100)
+  created_at    Int      @default(0) @db.Int
+  updated_at    Int      @default(0) @db.Int
+
+  shares        Share[]
+
+  @@map("users")
+}
+
+model Share {
+  id            Int      @id @default(autoincrement()) @db.Int
+  user_id       Int      @db.Int
+  slug          String   @unique @db.NVarChar(32)
+  title         String   @db.NVarChar(255)
+  left_content  String   @db.NText
+  right_content String   @db.NText
+  hidden        Boolean  @default(false) @db.Bit
+  password_hash String?  @map("password_hash") @db.NVarChar(255)
+  expires_at    Int?     @db.Int
+  created_at    Int      @default(0) @db.Int
+  updated_at    Int      @default(0) @db.Int
+  deleted_at    Int?     @db.Int
+
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id])
+  @@index([expires_at])
+  @@index([deleted_at])
+  @@map("shares")
+}

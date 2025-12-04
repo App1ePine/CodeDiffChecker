@@ -8,7 +8,7 @@ const submitting = ref(false)
 
 const form = reactive({
   dbType: 'mysql',
-  dbHost: 'localhost',
+  dbHost: '127.0.0.1',
   dbPort: 3306,
   dbName: 'code_diff_checker',
   dbUser: 'root',
@@ -61,6 +61,8 @@ const handleDbTypeChange = (value: string) => {
     form.dbPort = 3306
   } else if (value === 'postgresql') {
     form.dbPort = 5432
+  } else if (value === 'mssql') {
+    form.dbPort = 1433
   }
 }
 
@@ -113,6 +115,7 @@ async function handleSubmit() {
           <el-radio-group v-model="form.dbType" @change="handleDbTypeChange">
             <el-radio-button label="mysql">MySQL / MariaDB</el-radio-button>
             <el-radio-button label="postgresql">PostgreSQL</el-radio-button>
+            <el-radio-button label="mssql">SQL Server / MSSQL</el-radio-button>
           </el-radio-group>
         </el-form-item>
 
