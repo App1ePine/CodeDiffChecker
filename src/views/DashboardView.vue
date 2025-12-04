@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessageBox, ElNotification } from 'element-plus'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { deleteShare, listShares, updateShare } from '@/api/shares'
 import type { ShareSummary } from '@/api/types'
@@ -33,7 +33,7 @@ async function fetchShares() {
     shares.value = response.shares
   } catch (error) {
     console.error('Failed to load shares', error)
-    ElMessage.error('Unable to load shares right now.')
+    ElNotification.error({ message: 'Unable to load shares right now.' })
   } finally {
     loading.value = false
   }
@@ -58,13 +58,13 @@ async function saveEdits() {
     })
     updateShareInList(response.share)
     editDialogVisible.value = false
-    ElMessage.success('Share updated')
+    ElNotification.success({ message: 'Share updated' })
   } catch (error) {
     if (error instanceof ApiError) {
-      ElMessage.error(error.message)
+      ElNotification.error({ message: error.message })
     } else {
       console.error('Failed to update share', error)
-      ElMessage.error('Could not update share.')
+      ElNotification.error({ message: 'Could not update share.' })
     }
   } finally {
     editSubmitting.value = false
@@ -77,13 +77,13 @@ async function toggleHidden(share: ShareSummary) {
       hidden: !share.hidden,
     })
     updateShareInList(response.share)
-    ElMessage.success(response.share.hidden ? 'Share hidden' : 'Share visible')
+    ElNotification.success({ message: response.share.hidden ? 'Share hidden' : 'Share visible' })
   } catch (error) {
     if (error instanceof ApiError) {
-      ElMessage.error(error.message)
+      ElNotification.error({ message: error.message })
     } else {
       console.error('Failed to toggle share', error)
-      ElMessage.error('Unable to update visibility.')
+      ElNotification.error({ message: 'Unable to update visibility.' })
     }
   }
 }
@@ -101,13 +101,13 @@ async function removeShare(share: ShareSummary) {
   try {
     await deleteShare(share.id)
     shares.value = shares.value.filter((item) => item.id !== share.id)
-    ElMessage.success('Share deleted')
+    ElNotification.success({ message: 'Share deleted' })
   } catch (error) {
     if (error instanceof ApiError) {
-      ElMessage.error(error.message)
+      ElNotification.error({ message: error.message })
     } else {
       console.error('Failed to delete share', error)
-      ElMessage.error('Unable to delete share.')
+      ElNotification.error({ message: 'Unable to delete share.' })
     }
   }
 }
@@ -115,10 +115,10 @@ async function removeShare(share: ShareSummary) {
 async function copyLink(share: ShareSummary) {
   try {
     await navigator.clipboard?.writeText(share.url)
-    ElMessage.success('Link copied to clipboard')
+    ElNotification.success({ message: 'Link copied to clipboard' })
   } catch (error) {
     console.error('Copy failed', error)
-    ElMessage.error('Copy failed. Please copy the link manually.')
+    ElNotification.error({ message: 'Copy failed. Please copy the link manually.' })
   }
 }
 

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { reactive, ref } from 'vue'
 
 const formRef = ref<FormInstance | null>(null)
@@ -89,13 +89,13 @@ async function handleSubmit() {
       throw new Error(data.error || 'Installation failed')
     }
 
-    ElMessage.success('安装成功！正在跳转...')
+    ElNotification.success({ message: '安装成功！正在跳转...' })
     setTimeout(() => {
       window.location.href = '/'
     }, 1500)
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Installation failed'
-    ElMessage.error(message)
+    ElNotification.error({ message })
   } finally {
     submitting.value = false
   }

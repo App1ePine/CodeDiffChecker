@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { reactive, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { ApiError } from '@/api/types'
@@ -96,13 +96,13 @@ async function handleSubmit() {
     })
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     await router.push(redirect)
-    ElMessage.success('Account created. Welcome!')
+    ElNotification.success({ message: 'Account created. Welcome!' })
   } catch (error: unknown) {
     if (error instanceof ApiError) {
-      ElMessage.error(error.message)
+      ElNotification.error({ message: error.message })
     } else {
       console.error('Registration failed', error)
-      ElMessage.error('Unable to create account. Please try again.')
+      ElNotification.error({ message: 'Unable to create account. Please try again.' })
     }
   } finally {
     submitting.value = false

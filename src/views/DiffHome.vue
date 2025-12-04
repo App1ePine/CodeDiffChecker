@@ -2,7 +2,7 @@
 import type { DiffFile } from '@git-diff-view/file'
 import { generateDiffFile } from '@git-diff-view/file'
 import { DiffModeEnum, DiffView, setEnableFastDiffTemplate } from '@git-diff-view/vue'
-import { ElMessage } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { computed, reactive, ref } from 'vue'
 import { createShare } from '@/api/shares'
 import { ApiError } from '@/api/types'
@@ -76,7 +76,7 @@ function loadSamples() {
 
 function openShareDialog() {
   if (!hasDiff.value) {
-    ElMessage.warning('There is no difference to share yet.')
+    ElNotification.warning({ message: 'There is no difference to share yet.' })
     return
   }
   shareForm.title = `Diff ${new Date().toLocaleString()}`
@@ -87,7 +87,7 @@ function openShareDialog() {
 
 async function submitShare() {
   if (!hasDiff.value) {
-    ElMessage.warning('There is no difference to share yet.')
+    ElNotification.warning({ message: 'There is no difference to share yet.' })
     return
   }
 
@@ -111,16 +111,16 @@ async function submitShare() {
 
     try {
       await navigator.clipboard?.writeText(response.share.url)
-      ElMessage.success('Share created. Link copied to clipboard.')
+      ElNotification.success({ message: 'Share created. Link copied to clipboard.' })
     } catch {
-      ElMessage.success('Share created. Copy the link below to share it.')
+      ElNotification.success({ message: 'Share created. Copy the link below to share it.' })
     }
   } catch (error) {
     if (error instanceof ApiError) {
-      ElMessage.error(error.message)
+      ElNotification.error({ message: error.message })
     } else {
       console.error('Failed to create share', error)
-      ElMessage.error('Unable to create share, please try again.')
+      ElNotification.error({ message: 'Unable to create share, please try again.' })
     }
   } finally {
     shareSubmitting.value = false

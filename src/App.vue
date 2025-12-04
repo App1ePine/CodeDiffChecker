@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ElMessage } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { computed } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
@@ -23,10 +23,10 @@ async function handleLogout() {
   try {
     await authStore.logoutUser()
     await router.push({ name: 'home' })
-    ElMessage.success('Signed out')
+    ElNotification.success({ message: 'Signed out' })
   } catch (error) {
     console.error('Logout failed', error)
-    ElMessage.error('Failed to sign out, please try again.')
+    ElNotification.error({ message: 'Failed to sign out, please try again.' })
   }
 }
 </script>

@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type { FormInstance, FormRules } from 'element-plus'
-import { ElMessage } from 'element-plus'
+import { ElNotification } from 'element-plus'
 import { reactive, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { ApiError } from '@/api/types'
@@ -49,13 +49,13 @@ async function handleSubmit() {
     await authStore.loginUser({ username: form.username, password: form.password })
     const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard'
     await router.push(redirect)
-    ElMessage.success('Welcome back!')
+    ElNotification.success({ message: 'Welcome back!' })
   } catch (error: unknown) {
     if (error instanceof ApiError) {
-      ElMessage.error(error.message)
+      ElNotification.error({ message: error.message })
     } else {
       console.error('Login failed', error)
-      ElMessage.error('Unable to sign in. Please try again.')
+      ElNotification.error({ message: 'Unable to sign in. Please try again.' })
     }
   } finally {
     submitting.value = false
