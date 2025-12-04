@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import DashboardView from '@/views/DashboardView.vue'
 import DiffHome from '@/views/DiffHome.vue'
+import ExploreView from '@/views/ExploreView.vue'
 import InstallView from '@/views/Install.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
@@ -15,6 +16,12 @@ const router = createRouter({
       name: 'home',
       component: DiffHome,
       meta: { title: 'Code Diff Checker' },
+    },
+    {
+      path: '/explore',
+      name: 'explore',
+      component: ExploreView,
+      meta: { title: 'Explore Shares' },
     },
     {
       path: '/login',

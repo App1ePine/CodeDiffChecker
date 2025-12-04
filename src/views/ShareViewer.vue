@@ -65,7 +65,7 @@ async function loadShare() {
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 404) {
-        errorMessage.value = 'This share does not exist or is hidden.'
+        errorMessage.value = 'This share does not exist.'
       } else if (error.status === 410) {
         errorMessage.value = 'This share has expired.'
       } else {

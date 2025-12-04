@@ -1,5 +1,5 @@
 import { http } from './http'
-import type { ShareDetail, ShareSummary } from './types'
+import type { PublicShareSummary, ShareDetail, ShareSummary } from './types'
 
 export type CreateSharePayload = {
   title: string
@@ -41,4 +41,14 @@ export async function deleteShare(id: number) {
 
 export async function fetchShareBySlug(slug: string) {
   return http<{ share: ShareDetail }>(`/api/public/shares/${slug}`)
+}
+
+export async function listPublicShares(params?: { page?: number; pageSize?: number }) {
+  const search = new URLSearchParams()
+  if (params?.page) search.set('page', String(params.page))
+  if (params?.pageSize) search.set('pageSize', String(params.pageSize))
+
+  const query = search.toString()
+  const path = query ? `/api/public/shares?${query}` : '/api/public/shares'
+  return http<{ shares: PublicShareSummary[]; pagination: { page: number; pageSize: number; total: number } }>(path)
 }

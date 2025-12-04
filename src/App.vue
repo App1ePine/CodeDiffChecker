@@ -12,6 +12,7 @@ const userLabel = computed(() => authStore.user?.nickname ?? authStore.user?.use
 
 const navigationLinks = computed(() => [
   { to: { name: 'home' }, label: 'Compare', requiresAuth: false },
+  { to: { name: 'explore' }, label: 'Explore', requiresAuth: false },
   { to: { name: 'dashboard' }, label: 'My Shares', requiresAuth: true },
 ])
 

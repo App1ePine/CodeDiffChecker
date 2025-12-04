@@ -29,6 +29,15 @@ export type ShareDetail = {
   updatedAt: string
 }
 
+export type PublicShareSummary = {
+  slug: string
+  title: string
+  ownerName: string
+  expiresAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
 export class ApiError extends Error {
   status: number
   data: unknown
