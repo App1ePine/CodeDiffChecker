@@ -10,7 +10,7 @@ import { formatLocalDateTime } from '@/utils/datetime'
 const shares = ref<PublicShareSummary[]>([])
 const loading = ref(false)
 const page = ref(1)
-const pageSize = ref(12)
+const pageSize = ref(18)
 const total = ref(0)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(total.value / pageSize.value)))
@@ -81,31 +81,39 @@ function formatDate(value: string | null) {
 				<template #default>
 					<el-empty v-if="!shares.length" description="暂无公开分享" />
 
-					<div v-else class="share-grid">
+					<div v-else class="share-list">
 						<el-card
 							v-for="share in shares"
 							:key="share.slug"
 							shadow="hover"
 							class="share-card"
 						>
-							<div class="share-head">
-								<h3 class="share-title">{{ share.title }}</h3>
-								<el-tag v-if="share.expiresAt" size="small" type="warning">
-									Expires {{ formatDate(share.expiresAt) }}
-								</el-tag>
-								<el-tag v-else size="small" type="success">No expiration</el-tag>
-							</div>
-							<p class="share-meta">
-								Owner: {{ share.ownerName }} · Created {{ formatDate(share.createdAt) }}
-							</p>
+							<div class="share-row">
+								<div class="share-main">
+									<h3 class="share-title">{{ share.title }}</h3>
+									<div class="tag-row">
+										<el-tag v-if="share.hasPassword" size="small" type="warning">Password</el-tag>
+									</div>
+									<p class="share-meta">
+										Owner: {{ share.ownerName }} · Created {{ formatDate(share.createdAt) }}
+									</p>
+								</div>
 
-							<div class="share-actions">
-								<RouterLink :to="{ name: 'share-viewer', params: { slug: share.slug } }">
-									<el-button type="primary" plain>Open diff</el-button>
-								</RouterLink>
-								<el-link :href="`/shares/${share.slug}`" target="_blank" type="primary">
-									Open in new tab
-								</el-link>
+								<div class="share-expiry">
+									<el-tag v-if="share.expiresAt" type="warning">
+										Expires {{ formatDate(share.expiresAt) }}
+									</el-tag>
+									<el-tag v-else type="success">No expiration</el-tag>
+								</div>
+
+								<div class="share-actions">
+									<RouterLink :to="{ name: 'share-viewer', params: { slug: share.slug } }">
+										<el-button type="primary" plain>Open diff</el-button>
+									</RouterLink>
+									<el-link :href="`/shares/${share.slug}`" target="_blank" type="primary">
+										Open in new tab
+									</el-link>
+								</div>
 							</div>
 						</el-card>
 					</div>
@@ -114,7 +122,7 @@ function formatDate(value: string | null) {
 						<el-pagination
 							:current-page="page"
 							:page-size="pageSize"
-							:page-sizes="[6, 12, 24]"
+							:page-sizes="[12, 18, 24]"
 							:total="total"
 							layout="prev, pager, next, sizes"
 							@current-change="handlePageChange"
@@ -182,28 +190,38 @@ function formatDate(value: string | null) {
 	color: #6b7280;
 }
 
-.share-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+.share-list {
+	display: flex;
+	flex-direction: column;
 	gap: 12px;
 }
 
 .share-card {
-	display: flex;
-	flex-direction: column;
-	gap: 8px;
+	padding: 12px 16px;
 }
 
-.share-head {
-	display: flex;
+.share-row {
+	display: grid;
+	grid-template-columns: 1fr 220px 220px;
 	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
+	gap: 12px;
+}
+
+.share-main {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
 }
 
 .share-title {
 	margin: 0;
 	font-size: 18px;
+}
+
+.tag-row {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
 }
 
 .share-meta {
@@ -212,11 +230,17 @@ function formatDate(value: string | null) {
 	font-size: 13px;
 }
 
+.share-expiry {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
 .share-actions {
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	margin-top: 4px;
+	justify-content: flex-end;
+	gap: 10px;
 }
 
 .pagination-bar {
@@ -226,9 +250,18 @@ function formatDate(value: string | null) {
 }
 
 @media (max-width: 640px) {
-	.share-actions {
-		flex-direction: column;
+	.share-row {
+		grid-template-columns: 1fr;
 		align-items: flex-start;
+	}
+
+	.share-expiry {
+		justify-content: flex-start;
+	}
+
+	.share-actions {
+		justify-content: flex-start;
+		flex-wrap: wrap;
 	}
 }
 </style>

@@ -15,6 +15,8 @@ const editForm = reactive({
   title: '',
   hidden: false,
   expiresAt: null as string | null,
+  password: '',
+  clearPassword: false,
 })
 
 const stats = computed(() => {
@@ -44,18 +46,34 @@ function openEditDialog(share: ShareSummary) {
   editForm.title = share.title
   editForm.hidden = share.hidden
   editForm.expiresAt = toDatePickerString(share.expiresAt)
+  editForm.password = ''
+  editForm.clearPassword = false
   editDialogVisible.value = true
 }
 
 async function saveEdits() {
   if (!editForm.id) return
+
+  if (!editForm.clearPassword && editForm.password && editForm.password.length < 6) {
+    ElNotification.error({ message: 'Password must be at least 6 characters.' })
+    return
+  }
+
   editSubmitting.value = true
   try {
-    const response = await updateShare(editForm.id, {
+    const payload: Parameters<typeof updateShare>[1] = {
       title: editForm.title,
       hidden: editForm.hidden,
       expiresAt: fromDatePickerValue(editForm.expiresAt),
-    })
+    }
+
+    if (editForm.clearPassword) {
+      payload.password = null
+    } else if (editForm.password.trim()) {
+      payload.password = editForm.password.trim()
+    }
+
+    const response = await updateShare(editForm.id, payload)
     updateShareInList(response.share)
     editDialogVisible.value = false
     ElNotification.success({ message: 'Share updated' })
@@ -186,6 +204,7 @@ function formatDate(value: string | null) {
 						<div class="title-cell">
 							<span>{{ row.title }}</span>
 							<el-tag v-if="row.hidden" size="small" type="info">Hidden</el-tag>
+							<el-tag v-if="row.hasPassword" size="small" type="warning">Password</el-tag>
 							<el-tag v-if="isExpired(row)" size="small" type="danger">Expired</el-tag>
 						</div>
 						<el-link :href="row.url" target="_blank">{{ row.url }}</el-link>
@@ -202,13 +221,13 @@ function formatDate(value: string | null) {
 
 				<el-table-column align="right" label="Actions" min-width="240">
 					<template #default="{ row }">
-						<el-button-group>
-							<el-button size="small" @click="copyLink(row)">Copy</el-button>
-							<el-button size="small" type="primary" @click="openEditDialog(row)">Edit</el-button>
-							<el-button size="small" type="info" @click="toggleHidden(row)">
+						<el-button-group class="action-group">
+							<el-button class="action-button" size="small" @click="copyLink(row)">Copy</el-button>
+							<el-button class="action-button" size="small" type="primary" @click="openEditDialog(row)">Edit</el-button>
+							<el-button class="action-button" size="small" type="info" @click="toggleHidden(row)">
 								{{ row.hidden ? 'Unhide' : 'Hide' }}
 							</el-button>
-							<el-button size="small" type="danger" @click="removeShare(row)">Delete</el-button>
+							<el-button class="action-button" size="small" type="danger" @click="removeShare(row)">Delete</el-button>
 						</el-button-group>
 					</template>
 				</el-table-column>
@@ -237,6 +256,14 @@ function formatDate(value: string | null) {
 						clearable
 						placeholder="Never"
 					/>
+				</el-form-item>
+
+				<el-form-item label="New password (optional)">
+					<el-input v-model="editForm.password" show-password placeholder="Set a new password" />
+				</el-form-item>
+
+				<el-form-item>
+					<el-checkbox v-model="editForm.clearPassword">Clear existing password</el-checkbox>
 				</el-form-item>
 			</el-form>
 			<template #footer>
@@ -302,6 +329,16 @@ function formatDate(value: string | null) {
 	gap: 6px;
 	align-items: center;
 	flex-wrap: wrap;
+}
+
+.action-group {
+	display: inline-flex;
+	gap: 6px;
+}
+
+.action-button {
+	min-width: 74px;
+	justify-content: center;
 }
 
 @media (max-width: 768px) {

@@ -31,6 +31,7 @@ model Share {
   left_content  String   @db.MediumText
   right_content String   @db.MediumText
   hidden        Boolean  @default(false)
+  password_hash String?  @map("password_hash") @db.VarChar(255)
   expires_at    Int?     @db.UnsignedInt
   created_at    Int      @default(0) @db.UnsignedInt
   updated_at    Int      @default(0) @db.UnsignedInt

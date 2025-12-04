@@ -41,6 +41,8 @@ const shareForm = reactive({
   title: '',
   hidden: false,
   expiresAt: null as string | null,
+  password: '',
+  confirmPassword: '',
 })
 
 const authStore = useAuthStore()
@@ -82,12 +84,24 @@ function openShareDialog() {
   shareForm.title = `Diff ${new Date().toLocaleString()}`
   shareForm.hidden = false
   shareForm.expiresAt = formatDate(new Date())
+  shareForm.password = ''
+  shareForm.confirmPassword = ''
   shareDialogVisible.value = true
 }
 
 async function submitShare() {
   if (!hasDiff.value) {
     ElNotification.warning({ message: 'There is no difference to share yet.' })
+    return
+  }
+
+  if (shareForm.password && shareForm.password.length < 6) {
+    ElNotification.error({ message: 'Password must be at least 6 characters.' })
+    return
+  }
+
+  if (shareForm.password && shareForm.password !== shareForm.confirmPassword) {
+    ElNotification.error({ message: 'Password does not match confirmation.' })
     return
   }
 
@@ -98,6 +112,7 @@ async function submitShare() {
       leftContent: leftContent.value,
       rightContent: rightContent.value,
       hidden: shareForm.hidden,
+      password: shareForm.password.trim() || null,
       expiresAt: (() => {
         if (!shareForm.expiresAt) return null
         const date = parseDatePickerString(shareForm.expiresAt)
@@ -281,6 +296,14 @@ async function submitShare() {
 						inactive-text="Listed"
 						inline-prompt
 					/>
+				</el-form-item>
+
+				<el-form-item label="Password (optional)">
+					<el-input v-model="shareForm.password" show-password placeholder="Set a password to protect this share" />
+				</el-form-item>
+
+				<el-form-item label="Confirm password">
+					<el-input v-model="shareForm.confirmPassword" show-password placeholder="Repeat password" />
 				</el-form-item>
 
 				<el-form-item label="Expiration (optional)">

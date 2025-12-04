@@ -12,6 +12,7 @@ export type ShareSummary = {
   slug: string
   title: string
   hidden: boolean
+  hasPassword: boolean
   expiresAt: string | null
   createdAt: string
   updatedAt: string
@@ -33,6 +34,7 @@ export type PublicShareSummary = {
   slug: string
   title: string
   ownerName: string
+  hasPassword: boolean
   expiresAt: string | null
   createdAt: string
   updatedAt: string

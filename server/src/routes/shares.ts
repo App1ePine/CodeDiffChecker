@@ -5,6 +5,7 @@ import { env } from '../env'
 import { requireAuth } from '../middleware/auth'
 import type { AppVariables } from '../types'
 import { epochSecondsToIsoString, toEpochSeconds } from '../utils/datetime'
+import { hashPassword } from '../utils/password'
 import { createShareSlug } from '../utils/slug'
 
 type AppEnv = {
@@ -18,6 +19,10 @@ const createShareSchema = z.object({
   leftContent: z.string().min(1),
   rightContent: z.string().min(1),
   hidden: z.boolean().optional().default(false),
+  password: z
+    .union([z.string().min(6).max(64), z.literal(''), z.null()])
+    .optional()
+    .transform((value) => (value === '' ? null : value)),
   expiresAt: z
     .string()
     .datetime()
@@ -29,6 +34,10 @@ const updateShareSchema = z
   .object({
     title: z.string().min(1).max(255).optional(),
     hidden: z.boolean().optional(),
+    password: z
+      .union([z.string().min(6).max(64), z.literal(''), z.null()])
+      .optional()
+      .transform((value) => (value === '' ? null : value)),
     expiresAt: z
       .string()
       .datetime()
@@ -56,6 +65,7 @@ router.get('/', async (c) => {
       slug: share.slug,
       title: share.title,
       hidden: share.hidden,
+      hasPassword: Boolean(share.password_hash),
       expiresAt: epochSecondsToIsoString(share.expires_at),
       createdAt: epochSecondsToIsoString(share.created_at),
       updatedAt: epochSecondsToIsoString(share.updated_at),
@@ -73,11 +83,14 @@ router.post('/', async (c) => {
   }
 
   const { hidden, leftContent, rightContent, title, expiresAt } = parsed.data
+  const password = parsed.data.password ?? null
   const expiresAtSeconds = expiresAt ? toEpochSeconds(expiresAt) : null
   const expiresAtIso = expiresAtSeconds === null ? null : epochSecondsToIsoString(expiresAtSeconds)
 
   const slug = await reserveUniqueSlug()
   const db = getDb()
+
+  const passwordHash = password ? await hashPassword(password) : null
 
   const share = await db.share.create({
     data: {
@@ -87,6 +100,7 @@ router.post('/', async (c) => {
       left_content: leftContent,
       right_content: rightContent,
       hidden,
+      password_hash: passwordHash,
       expires_at: expiresAtSeconds,
       created_at: Math.floor(Date.now() / 1000),
       updated_at: Math.floor(Date.now() / 1000),
@@ -99,7 +113,10 @@ router.post('/', async (c) => {
       slug,
       title,
       hidden,
+      hasPassword: Boolean(passwordHash),
       expiresAt: expiresAtIso,
+      createdAt: epochSecondsToIsoString(share.created_at),
+      updatedAt: epochSecondsToIsoString(share.updated_at),
       url: `${env.SHARE_BASE_URL}/shares/${slug}`,
     },
   })
@@ -131,6 +148,7 @@ router.patch('/:id', async (c) => {
     updated_at: number
     title?: string
     hidden?: boolean
+    password_hash?: string | null
     expires_at?: number | null
   }
 
@@ -142,6 +160,11 @@ router.patch('/:id', async (c) => {
 
   if (parsed.data.hidden !== undefined) {
     data.hidden = parsed.data.hidden
+  }
+
+  if (parsed.data.password !== undefined) {
+    const passwordValue = parsed.data.password
+    data.password_hash = passwordValue ? await hashPassword(passwordValue) : null
   }
 
   if (parsed.data.expiresAt !== undefined) {
@@ -159,6 +182,7 @@ router.patch('/:id', async (c) => {
       slug: updated.slug,
       title: updated.title,
       hidden: updated.hidden,
+      hasPassword: Boolean(updated.password_hash),
       expiresAt: epochSecondsToIsoString(updated.expires_at),
       createdAt: epochSecondsToIsoString(updated.created_at),
       updatedAt: epochSecondsToIsoString(updated.updated_at),

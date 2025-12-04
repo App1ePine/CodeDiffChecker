@@ -6,12 +6,14 @@ export type CreateSharePayload = {
   leftContent: string
   rightContent: string
   hidden?: boolean
+  password?: string | null
   expiresAt?: string | null
 }
 
 export type UpdateSharePayload = {
   title?: string
   hidden?: boolean
+  password?: string | null
   expiresAt?: string | null
 }
 
@@ -41,6 +43,13 @@ export async function deleteShare(id: number) {
 
 export async function fetchShareBySlug(slug: string) {
   return http<{ share: ShareDetail }>(`/api/public/shares/${slug}`)
+}
+
+export async function unlockShareBySlug(slug: string, password: string) {
+  return http<{ share: ShareDetail }>(`/api/public/shares/${slug}/access`, {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  })
 }
 
 export async function listPublicShares(params?: { page?: number; pageSize?: number }) {
