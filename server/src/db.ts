@@ -3,7 +3,9 @@ import { PrismaClient as MSSQLClient } from './generated/client-mssql'
 import { PrismaClient as MySQLClient } from './generated/client-mysql'
 import { PrismaClient as PGClient } from './generated/client-pg'
 
-type DbClient = MySQLClient | PGClient | MSSQLClient
+type DbClient = Pick<MySQLClient, 'user' | 'share'> &
+  Pick<PGClient, 'user' | 'share'> &
+  Pick<MSSQLClient, 'user' | 'share'>
 
 let db: DbClient | null = null
 
@@ -28,7 +30,7 @@ export const initDb = () => {
             url,
           },
         },
-      })
+      }) as unknown as DbClient
     } else if (env.DB_TYPE === 'postgresql') {
       db = new PGClient({
         datasources: {
@@ -36,7 +38,7 @@ export const initDb = () => {
             url,
           },
         },
-      })
+      }) as unknown as DbClient
     } else {
       db = new MSSQLClient({
         datasources: {
@@ -44,7 +46,7 @@ export const initDb = () => {
             url,
           },
         },
-      })
+      }) as unknown as DbClient
     }
   }
 }
