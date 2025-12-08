@@ -7,6 +7,7 @@ import { useRoute } from 'vue-router'
 import { fetchShareBySlug, unlockShareBySlug } from '@/api/shares'
 import type { ShareDetail } from '@/api/types'
 import { ApiError } from '@/api/types'
+import { decodeContent } from '@/utils/compression'
 import { formatLocalDateTime } from '@/utils/datetime'
 
 const route = useRoute()
@@ -66,7 +67,7 @@ async function loadShare() {
 
   try {
     const response = await fetchShareBySlug(slug)
-    share.value = response.share
+    share.value = withDecodedShare(response.share)
   } catch (error) {
     if (error instanceof ApiError) {
       if (error.status === 404) {
@@ -100,7 +101,7 @@ async function submitPassword() {
   errorMessage.value = ''
   try {
     const response = await unlockShareBySlug(slug, passwordInput.value)
-    share.value = response.share
+    share.value = withDecodedShare(response.share)
     needsPassword.value = false
   } catch (error) {
     if (error instanceof ApiError) {
@@ -116,6 +117,14 @@ async function submitPassword() {
 
 function formatDate(value: string | null) {
   return formatLocalDateTime(value)
+}
+
+function withDecodedShare(data: ShareDetail): ShareDetail {
+  return {
+    ...data,
+    leftContent: decodeContent(data.leftContent),
+    rightContent: decodeContent(data.rightContent),
+  }
 }
 </script>
 

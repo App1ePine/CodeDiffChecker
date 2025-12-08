@@ -7,6 +7,7 @@ import { computed, reactive, ref } from 'vue'
 import { createShare } from '@/api/shares'
 import { ApiError } from '@/api/types'
 import { useAuthStore } from '@/stores/auth'
+import { encodeContent } from '@/utils/compression'
 import { formatDate, parseDatePickerString } from '@/utils/datetime'
 
 const sampleLeft = `import { createApp } from 'vue'
@@ -107,10 +108,13 @@ async function submitShare() {
 
   shareSubmitting.value = true
   try {
+    const compressedLeft = encodeContent(leftContent.value)
+    const compressedRight = encodeContent(rightContent.value)
+
     const payload = {
       title: shareForm.title.trim() || 'Untitled diff',
-      leftContent: leftContent.value,
-      rightContent: rightContent.value,
+      leftContent: compressedLeft,
+      rightContent: compressedRight,
       hidden: shareForm.hidden,
       password: shareForm.password.trim() || null,
       expiresAt: (() => {

@@ -29,6 +29,7 @@
     "hono": "^4.6.7",
     "jsonwebtoken": "^9.0.2",
     "nanoid": "^5.0.7",
+    "pako": "^2.1.0",
     "pinia": "^2.2.6",
     "vue": "^3.5.21",
     "vue-router": "^4.4.5",
@@ -40,6 +41,7 @@
     "@rsbuild/plugin-vue": "^1.1.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.6",
+    "@types/pako": "^2.0.4",
     "prisma": "^6.0.0",
     "tsx": "^4.19.1",
     "typescript": "^5.9.2"
