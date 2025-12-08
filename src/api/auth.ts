@@ -12,6 +12,8 @@ export type RegisterPayload = {
   password: string
   confirmPassword: string
   nickname: string
+  captchaAnswer: string
+  captchaToken: string
 }
 
 export type LoginResponse = {
@@ -38,6 +40,16 @@ export async function register(payload: RegisterPayload) {
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export type CaptchaResponse = {
+  image: string
+  captchaToken: string
+  expiresIn: number
+}
+
+export async function fetchCaptcha() {
+  return http<CaptchaResponse>('/api/auth/captcha')
 }
 
 export async function fetchCurrentUser() {
