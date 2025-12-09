@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'code-diff-checker',
-      script: './server/dist/server',
+      script: '/path/to/your/server_binary_file',
+      cwd: '/path/to/your_project',
       instances: 1,
       autorestart: true,
       watch: false,
