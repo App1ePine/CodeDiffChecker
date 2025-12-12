@@ -14,6 +14,7 @@
     "server:build:linux": "cross-env NODE_ENV=production bun build server/src/index.ts --compile --target=bun-linux-x64 --outfile server/dist/server",
     "server:build:win": "cross-env NODE_ENV=production bun build server/src/index.ts --compile --target=bun-windows-x64 --outfile server/dist/server.exe",
     "server:start": "server/dist/server",
+    "export:bundle": "bun build src/utils/export-entry.ts --target=browser --format=iife --minify --outfile public/export-bundle.js",
     "postinstall": "bunx prisma generate --schema server/prisma/schema.mysql.prisma && bunx prisma generate --schema server/prisma/schema.postgres.prisma && bunx prisma generate --schema server/prisma/schema.mssql.prisma"
   },
   "dependencies": {

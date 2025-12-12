@@ -5,9 +5,11 @@ import { deleteShare, listShares, updateShare } from '@/api/shares'
 import type { ShareSummary } from '@/api/types'
 import { ApiError } from '@/api/types'
 import { formatLocalDateTime, parseDatePickerString, toDatePickerString } from '@/utils/datetime'
+import { exportShareToHtml } from '@/utils/export-html'
 
 const shares = ref<ShareSummary[]>([])
 const loading = ref(false)
+const exportingId = ref<number | null>(null)
 const editDialogVisible = ref(false)
 const editSubmitting = ref(false)
 const editForm = reactive({
@@ -140,6 +142,19 @@ async function copyLink(share: ShareSummary) {
   }
 }
 
+async function exportShare(share: ShareSummary) {
+  exportingId.value = share.id
+  try {
+    await exportShareToHtml(share)
+    ElNotification.success({ message: 'Export started' })
+  } catch (error) {
+    console.error('Export failed', error)
+    ElNotification.error({ message: 'Failed to export share' })
+  } finally {
+    exportingId.value = null
+  }
+}
+
 function isExpired(share: ShareSummary) {
   if (!share.expiresAt) return false
   return new Date(share.expiresAt).getTime() < Date.now()
@@ -219,12 +234,19 @@ function formatDate(value: string | null) {
 					<template #default="{ row }">{{ formatDate(row.updatedAt) }}</template>
 				</el-table-column>
 
-				<el-table-column align="right" label="Actions" min-width="240">
-					<template #default="{ row }">
-						<el-button-group class="action-group">
-							<el-button class="action-button" size="small" @click="copyLink(row)">Copy</el-button>
-							<el-button class="action-button" size="small" type="primary" @click="openEditDialog(row)">Edit</el-button>
-							<el-button class="action-button" size="small" type="info" @click="toggleHidden(row)">
+				        <el-table-column align="right" label="Actions" min-width="240">
+				          <template #default="{ row }">
+				            <el-button-group class="action-group">
+				              <el-button class="action-button" size="small" @click="copyLink(row)">Copy</el-button>
+				              <el-button
+				                class="action-button"
+				                size="small"
+				                :loading="exportingId === row.id"
+				                @click="exportShare(row)"
+				              >
+				                Export
+				              </el-button>
+				              <el-button class="action-button" size="small" type="primary" @click="openEditDialog(row)">Edit</el-button>							<el-button class="action-button" size="small" type="info" @click="toggleHidden(row)">
 								{{ row.hidden ? 'Unhide' : 'Hide' }}
 							</el-button>
 							<el-button class="action-button" size="small" type="danger" @click="removeShare(row)">Delete</el-button>

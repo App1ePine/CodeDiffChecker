@@ -142,6 +142,10 @@ function withDecodedShare(data: ShareDetail): ShareDetail {
 						</p>
 					</div>
 					<div v-if="share" class="controls">
+						<el-radio-group size="small" v-model="mode">
+							<el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
+							<el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
+						</el-radio-group>
 						<el-switch size="large" v-model="fastDiffEnabled" active-text="Fast diff" inline-prompt inactive-text="Precise" />
 						<el-switch size="large" v-model="wrap" active-text="Wrap" inline-prompt inactive-text="No wrap" />
 						<el-switch size="large" v-model="highlight" active-text="Highlight" inline-prompt inactive-text="Plain" />
