@@ -1,10 +1,34 @@
 <script lang="ts" setup>
+import { Loading } from '@element-plus/icons-vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import { ElNotification } from 'element-plus'
 import { reactive, ref } from 'vue'
 
 const formRef = ref<FormInstance | null>(null)
 const submitting = ref(false)
+const installed = ref(false)
+const checking = ref(true)
+
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+
+onMounted(async () => {
+  try {
+    const res = await fetch('/api/install/status')
+    if (res.ok) {
+      const data = await res.json()
+      if (data.installed) {
+        installed.value = true
+      }
+    }
+  } catch (e) {
+    // ignore
+  } finally {
+    checking.value = false
+  }
+})
 
 const form = reactive({
   dbType: 'mysql',
@@ -107,83 +131,103 @@ async function handleSubmit() {
 <template>
   <div class="install-page">
     <el-card class="install-card">
-      <h2>安装</h2>
-      <p class="hint">配置数据库以开始使用。</p>
+      <div v-if="checking" class="text-center">
+        <el-icon class="is-loading">
+          <Loading />
+        </el-icon> Checking status...
+      </div>
+      <div v-else-if="installed" class="installed-msg">
+        <el-result icon="success" title="Running" sub-title="The application is already installed and running.">
+          <template #extra>
+            <el-button type="primary" @click="router.push('/')">Go Home</el-button>
+          </template>
+        </el-result>
+      </div>
+      <template v-else>
+        <h2>安装</h2>
+        <p class="hint">配置数据库以开始使用。</p>
 
-      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleSubmit">
-        <el-form-item label="数据库类型" prop="dbType">
-          <el-radio-group v-model="form.dbType" @change="handleDbTypeChange">
-            <el-radio-button label="mysql">MySQL / MariaDB</el-radio-button>
-            <el-radio-button label="postgresql">PostgreSQL</el-radio-button>
-            <el-radio-button label="mssql">SQL Server / MSSQL</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
+        <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleSubmit">
 
-        <div class="form-row">
-          <el-form-item label="主机" prop="dbHost" style="flex: 2">
-            <el-input v-model="form.dbHost" placeholder="localhost" />
+          <el-form-item label="数据库类型" prop="dbType">
+            <el-radio-group v-model="form.dbType" @change="handleDbTypeChange">
+              <el-radio-button label="mysql">MySQL / MariaDB</el-radio-button>
+              <el-radio-button label="postgresql">PostgreSQL</el-radio-button>
+              <el-radio-button label="mssql">SQL Server / MSSQL</el-radio-button>
+            </el-radio-group>
           </el-form-item>
-          <el-form-item label="端口" prop="dbPort" style="flex: 1">
-            <el-input-number v-model="form.dbPort" :min="1" :max="65535" style="width: 100%" />
+
+          <div class="form-row">
+            <el-form-item label="主机" prop="dbHost" style="flex: 2">
+              <el-input v-model="form.dbHost" placeholder="localhost" />
+            </el-form-item>
+            <el-form-item label="端口" prop="dbPort" style="flex: 1">
+              <el-input-number v-model="form.dbPort" :min="1" :max="65535" style="width: 100%" />
+            </el-form-item>
+          </div>
+
+          <el-form-item label="数据库名称" prop="dbName">
+            <el-input v-model="form.dbName" placeholder="code_diff_checker" />
           </el-form-item>
-        </div>
 
-        <el-form-item label="数据库名称" prop="dbName">
-          <el-input v-model="form.dbName" placeholder="code_diff_checker" />
-        </el-form-item>
+          <el-form-item label="数据库用户" prop="dbUser">
+            <el-input v-model="form.dbUser" placeholder="root" />
+          </el-form-item>
 
-        <el-form-item label="数据库用户" prop="dbUser">
-          <el-input v-model="form.dbUser" placeholder="root" />
-        </el-form-item>
+          <el-form-item label="数据库密码" prop="dbPassword">
+            <el-input v-model="form.dbPassword" type="password" show-password placeholder="Password" />
+          </el-form-item>
 
-        <el-form-item label="数据库密码" prop="dbPassword">
-          <el-input v-model="form.dbPassword" type="password" show-password placeholder="Password" />
-        </el-form-item>
+          <el-divider />
 
-        <el-divider />
+          <el-form-item label="JWT 密钥" prop="jwtSecret">
+            <el-input v-model="form.jwtSecret" placeholder="Random string for session security">
+              <template #append>
+                <el-button @click="generateSecret">生成</el-button>
+              </template>
+            </el-input>
+          </el-form-item>
 
-        <el-form-item label="JWT 密钥" prop="jwtSecret">
-          <el-input v-model="form.jwtSecret" placeholder="Random string for session security">
-            <template #append>
-              <el-button @click="generateSecret">生成</el-button>
-            </template>
-          </el-input>
-        </el-form-item>
+          <el-divider content-position="center">Admin Account</el-divider>
 
-        <el-divider content-position="center">Admin Account</el-divider>
+          <el-form-item label="管理员用户名" prop="adminUsername">
+            <el-input v-model="form.adminUsername" placeholder="admin" />
+          </el-form-item>
 
-        <el-form-item label="管理员用户名" prop="adminUsername">
-          <el-input v-model="form.adminUsername" placeholder="admin" />
-        </el-form-item>
+          <el-form-item label="管理员邮箱" prop="adminEmail">
+            <el-input v-model="form.adminEmail" placeholder="admin@example.com" />
+          </el-form-item>
 
-        <el-form-item label="管理员邮箱" prop="adminEmail">
-          <el-input v-model="form.adminEmail" placeholder="admin@example.com" />
-        </el-form-item>
+          <el-form-item label="管理员昵称" prop="adminNickname">
+            <el-input v-model="form.adminNickname" placeholder="System Administrator" />
+          </el-form-item>
 
-        <el-form-item label="管理员昵称" prop="adminNickname">
-          <el-input v-model="form.adminNickname" placeholder="System Administrator" />
-        </el-form-item>
+          <el-form-item label="管理员密码" prop="adminPassword">
+            <el-input v-model="form.adminPassword" type="password" show-password placeholder="Password" />
+          </el-form-item>
 
-        <el-form-item label="管理员密码" prop="adminPassword">
-          <el-input v-model="form.adminPassword" type="password" show-password placeholder="Password" />
-        </el-form-item>
-
-        <el-form-item>
-          <el-button :loading="submitting" type="primary" style="width: 100%" @click="handleSubmit">
-            安装并初始化
-          </el-button>
-        </el-form-item>
-      </el-form>
+          <el-form-item>
+            <el-button :loading="submitting" type="primary" style="width: 100%" @click="handleSubmit">
+              安装并初始化
+            </el-button>
+          </el-form-item>
+        </el-form>
+      </template>
     </el-card>
   </div>
 </template>
 
 <style scoped>
+.text-center {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
 .install-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
   background-color: #f3f4f6;
   padding: 20px;
 }

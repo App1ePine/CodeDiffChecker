@@ -67,36 +67,6 @@ router.beforeEach(async (to, _from, next) => {
     await authStore.bootstrap()
   }
 
-  // 检查安装状态
-  if (to.name !== 'install') {
-    try {
-      const res = await fetch('/api/install/status')
-      if (res.ok) {
-        const data = await res.json()
-        if (!data.installed) {
-          return next({ name: 'install' })
-        }
-      } else {
-        // 非 2xx 响应视为未安装
-        return next({ name: 'install' })
-      }
-    } catch (e) {
-      // 请求失败视为未安装
-      return next({ name: 'install' })
-    }
-  } else {
-    // 进入安装前，检查是否已安装，已安装则跳转首页
-    try {
-      const res = await fetch('/api/install/status')
-      if (res.ok) {
-        const data = await res.json()
-        if (data.installed) {
-          return next({ name: 'home' })
-        }
-      }
-    } catch (e) {}
-  }
-
   // 鉴权检查
   if (to.meta?.requiresAuth && !authStore.isAuthenticated) {
     return next({ name: 'login', query: { redirect: to.fullPath } })

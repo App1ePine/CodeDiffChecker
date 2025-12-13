@@ -17,6 +17,7 @@ const navigationLinks = computed(() => [
 ])
 
 const activePath = computed(() => route.name)
+const isInstallPage = computed(() => route.name === 'install')
 
 const currentYear = new Date().getFullYear()
 
@@ -34,24 +35,20 @@ async function handleLogout() {
 
 <template>
 	<el-container class="app-shell">
-		<header class="app-header">
+		<header class="app-header" :class="{ 'is-install': isInstallPage }">
 			<div class="brand" @click="router.push({ name: 'home' })">
 				<span class="brand-title">Code Diff Checker</span>
 			</div>
 
-			<nav class="nav-links">
-				<RouterLink
-					v-for="link in navigationLinks"
-					:key="link.label"
+			<nav v-if="!isInstallPage" class="nav-links">
+				<RouterLink v-for="link in navigationLinks" :key="link.label"
 					v-show="!link.requiresAuth || authStore.isAuthenticated"
-					:class="['nav-link', { active: activePath === link.to.name }]"
-					:to="link.to"
-				>
+					:class="['nav-link', { active: activePath === link.to.name }]" :to="link.to">
 					{{ link.label }}
 				</RouterLink>
 			</nav>
 
-			<div class="auth-section">
+			<div v-if="!isInstallPage" class="auth-section">
 				<template v-if="authStore.isAuthenticated">
 					<span class="user-chip" title="Signed in">
 						{{ userLabel }}
@@ -94,6 +91,10 @@ async function handleLogout() {
 	background: rgba(255, 255, 255, 0.9);
 	backdrop-filter: blur(16px);
 	border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.app-header.is-install {
+	justify-content: center;
 }
 
 .brand {
