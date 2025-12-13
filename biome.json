@@ -43,5 +43,8 @@
         "noUnusedImports": "off"
       }
     }
+  },
+  "files": {
+    "includes": ["**", "!public/export-bundle.js"]
   }
 }
