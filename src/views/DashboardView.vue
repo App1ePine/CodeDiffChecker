@@ -13,168 +13,168 @@ const exportingId = ref<number | null>(null)
 const editDialogVisible = ref(false)
 const editSubmitting = ref(false)
 const editForm = reactive({
-  id: 0,
-  title: '',
-  hidden: false,
-  expiresAt: null as string | null,
-  password: '',
-  clearPassword: false,
+	id: 0,
+	title: '',
+	hidden: false,
+	expiresAt: null as string | null,
+	password: '',
+	clearPassword: false,
 })
 
 const stats = computed(() => {
-  const total = shares.value.length
-  const hidden = shares.value.filter((share) => share.hidden).length
-  const expired = shares.value.filter((share) => isExpired(share)).length
-  return { total, hidden, expired }
+	const total = shares.value.length
+	const hidden = shares.value.filter((share) => share.hidden).length
+	const expired = shares.value.filter((share) => isExpired(share)).length
+	return { total, hidden, expired }
 })
 
 onMounted(fetchShares)
 
 async function fetchShares() {
-  loading.value = true
-  try {
-    const response = await listShares()
-    shares.value = response.shares
-  } catch (error) {
-    console.error('Failed to load shares', error)
-    ElNotification.error({ message: 'Unable to load shares right now.' })
-  } finally {
-    loading.value = false
-  }
+	loading.value = true
+	try {
+		const response = await listShares()
+		shares.value = response.shares
+	} catch (error) {
+		console.error('Failed to load shares', error)
+		ElNotification.error({ message: 'Unable to load shares right now.' })
+	} finally {
+		loading.value = false
+	}
 }
 
 function openEditDialog(share: ShareSummary) {
-  editForm.id = share.id
-  editForm.title = share.title
-  editForm.hidden = share.hidden
-  editForm.expiresAt = toDatePickerString(share.expiresAt)
-  editForm.password = ''
-  editForm.clearPassword = false
-  editDialogVisible.value = true
+	editForm.id = share.id
+	editForm.title = share.title
+	editForm.hidden = share.hidden
+	editForm.expiresAt = toDatePickerString(share.expiresAt)
+	editForm.password = ''
+	editForm.clearPassword = false
+	editDialogVisible.value = true
 }
 
 async function saveEdits() {
-  if (!editForm.id) return
+	if (!editForm.id) return
 
-  if (!editForm.clearPassword && editForm.password && editForm.password.length < 6) {
-    ElNotification.error({ message: 'Password must be at least 6 characters.' })
-    return
-  }
+	if (!editForm.clearPassword && editForm.password && editForm.password.length < 6) {
+		ElNotification.error({ message: 'Password must be at least 6 characters.' })
+		return
+	}
 
-  editSubmitting.value = true
-  try {
-    const payload: Parameters<typeof updateShare>[1] = {
-      title: editForm.title,
-      hidden: editForm.hidden,
-      expiresAt: fromDatePickerValue(editForm.expiresAt),
-    }
+	editSubmitting.value = true
+	try {
+		const payload: Parameters<typeof updateShare>[1] = {
+			title: editForm.title,
+			hidden: editForm.hidden,
+			expiresAt: fromDatePickerValue(editForm.expiresAt),
+		}
 
-    if (editForm.clearPassword) {
-      payload.password = null
-    } else if (editForm.password.trim()) {
-      payload.password = editForm.password.trim()
-    }
+		if (editForm.clearPassword) {
+			payload.password = null
+		} else if (editForm.password.trim()) {
+			payload.password = editForm.password.trim()
+		}
 
-    const response = await updateShare(editForm.id, payload)
-    updateShareInList(response.share)
-    editDialogVisible.value = false
-    ElNotification.success({ message: 'Share updated' })
-  } catch (error) {
-    if (error instanceof ApiError) {
-      ElNotification.error({ message: error.message })
-    } else {
-      console.error('Failed to update share', error)
-      ElNotification.error({ message: 'Could not update share.' })
-    }
-  } finally {
-    editSubmitting.value = false
-  }
+		const response = await updateShare(editForm.id, payload)
+		updateShareInList(response.share)
+		editDialogVisible.value = false
+		ElNotification.success({ message: 'Share updated' })
+	} catch (error) {
+		if (error instanceof ApiError) {
+			ElNotification.error({ message: error.message })
+		} else {
+			console.error('Failed to update share', error)
+			ElNotification.error({ message: 'Could not update share.' })
+		}
+	} finally {
+		editSubmitting.value = false
+	}
 }
 
 async function toggleHidden(share: ShareSummary) {
-  try {
-    const response = await updateShare(share.id, {
-      hidden: !share.hidden,
-    })
-    updateShareInList(response.share)
-    ElNotification.success({ message: response.share.hidden ? 'Share hidden' : 'Share visible' })
-  } catch (error) {
-    if (error instanceof ApiError) {
-      ElNotification.error({ message: error.message })
-    } else {
-      console.error('Failed to toggle share', error)
-      ElNotification.error({ message: 'Unable to update visibility.' })
-    }
-  }
+	try {
+		const response = await updateShare(share.id, {
+			hidden: !share.hidden,
+		})
+		updateShareInList(response.share)
+		ElNotification.success({ message: response.share.hidden ? 'Share hidden' : 'Share visible' })
+	} catch (error) {
+		if (error instanceof ApiError) {
+			ElNotification.error({ message: error.message })
+		} else {
+			console.error('Failed to toggle share', error)
+			ElNotification.error({ message: 'Unable to update visibility.' })
+		}
+	}
 }
 
 async function removeShare(share: ShareSummary) {
-  try {
-    await ElMessageBox.confirm(`Delete share "${share.title}"? This cannot be undone.`, 'Delete share', {
-      type: 'warning',
-      confirmButtonText: 'Delete',
-    })
-  } catch {
-    return
-  }
+	try {
+		await ElMessageBox.confirm(`Delete share "${share.title}"? This cannot be undone.`, 'Delete share', {
+			type: 'warning',
+			confirmButtonText: 'Delete',
+		})
+	} catch {
+		return
+	}
 
-  try {
-    await deleteShare(share.id)
-    shares.value = shares.value.filter((item) => item.id !== share.id)
-    ElNotification.success({ message: 'Share deleted' })
-  } catch (error) {
-    if (error instanceof ApiError) {
-      ElNotification.error({ message: error.message })
-    } else {
-      console.error('Failed to delete share', error)
-      ElNotification.error({ message: 'Unable to delete share.' })
-    }
-  }
+	try {
+		await deleteShare(share.id)
+		shares.value = shares.value.filter((item) => item.id !== share.id)
+		ElNotification.success({ message: 'Share deleted' })
+	} catch (error) {
+		if (error instanceof ApiError) {
+			ElNotification.error({ message: error.message })
+		} else {
+			console.error('Failed to delete share', error)
+			ElNotification.error({ message: 'Unable to delete share.' })
+		}
+	}
 }
 
 async function copyLink(share: ShareSummary) {
-  try {
-    await navigator.clipboard?.writeText(share.url)
-    ElNotification.success({ message: 'Link copied to clipboard' })
-  } catch (error) {
-    console.error('Copy failed', error)
-    ElNotification.error({ message: 'Copy failed. Please copy the link manually.' })
-  }
+	try {
+		await navigator.clipboard?.writeText(share.url)
+		ElNotification.success({ message: 'Link copied to clipboard' })
+	} catch (error) {
+		console.error('Copy failed', error)
+		ElNotification.error({ message: 'Copy failed. Please copy the link manually.' })
+	}
 }
 
 async function exportShare(share: ShareSummary) {
-  exportingId.value = share.id
-  try {
-    await exportShareToHtml(share)
-    ElNotification.success({ message: 'Export started' })
-  } catch (error) {
-    console.error('Export failed', error)
-    ElNotification.error({ message: 'Failed to export share' })
-  } finally {
-    exportingId.value = null
-  }
+	exportingId.value = share.id
+	try {
+		await exportShareToHtml(share)
+		ElNotification.success({ message: 'Export started' })
+	} catch (error) {
+		console.error('Export failed', error)
+		ElNotification.error({ message: 'Failed to export share' })
+	} finally {
+		exportingId.value = null
+	}
 }
 
 function isExpired(share: ShareSummary) {
-  if (!share.expiresAt) return false
-  return new Date(share.expiresAt).getTime() < Date.now()
+	if (!share.expiresAt) return false
+	return new Date(share.expiresAt).getTime() < Date.now()
 }
 
 function fromDatePickerValue(value: string | null) {
-  const date = parseDatePickerString(value)
-  if (!date) return null
-  return date.toISOString()
+	const date = parseDatePickerString(value)
+	if (!date) return null
+	return date.toISOString()
 }
 
 function updateShareInList(updated: ShareSummary) {
-  const index = shares.value.findIndex((item) => item.id === updated.id)
-  if (index >= 0) {
-    shares.value.splice(index, 1, updated)
-  }
+	const index = shares.value.findIndex((item) => item.id === updated.id)
+	if (index >= 0) {
+		shares.value.splice(index, 1, updated)
+	}
 }
 
 function formatDate(value: string | null) {
-  return formatLocalDateTime(value)
+	return formatLocalDateTime(value)
 }
 </script>
 
@@ -234,22 +234,21 @@ function formatDate(value: string | null) {
 					<template #default="{ row }">{{ formatDate(row.updatedAt) }}</template>
 				</el-table-column>
 
-				        <el-table-column align="right" label="Actions" min-width="240">
-				          <template #default="{ row }">
-				            <el-button-group class="action-group">
-				              <el-button class="action-button" size="small" @click="copyLink(row)">Copy</el-button>
-				              <el-button
-				                class="action-button"
-				                size="small"
-				                :loading="exportingId === row.id"
-				                @click="exportShare(row)"
-				              >
-				                Export
-				              </el-button>
-				              <el-button class="action-button" size="small" type="primary" @click="openEditDialog(row)">Edit</el-button>							<el-button class="action-button" size="small" type="info" @click="toggleHidden(row)">
+				<el-table-column align="right" label="Actions" min-width="240">
+					<template #default="{ row }">
+						<el-button-group class="action-group">
+							<el-button class="action-button" size="small" @click="copyLink(row)">Copy</el-button>
+							<el-button class="action-button" size="small" type="success"
+								:loading="exportingId === row.id" @click="exportShare(row)">
+								Export
+							</el-button>
+							<el-button class="action-button" size="small" type="primary"
+								@click="openEditDialog(row)">Edit</el-button> <el-button class="action-button"
+								size="small" type="info" @click="toggleHidden(row)">
 								{{ row.hidden ? 'Unhide' : 'Hide' }}
 							</el-button>
-							<el-button class="action-button" size="small" type="danger" @click="removeShare(row)">Delete</el-button>
+							<el-button class="action-button" size="small" type="danger"
+								@click="removeShare(row)">Delete</el-button>
 						</el-button-group>
 					</template>
 				</el-table-column>
@@ -262,22 +261,11 @@ function formatDate(value: string | null) {
 					<el-input v-model="editForm.title" />
 				</el-form-item>
 				<el-form-item label="Visibility">
-					<el-switch
-						v-model="editForm.hidden"
-						active-text="Hidden"
-						inactive-text="Visible"
-						inline-prompt
-					/>
+					<el-switch v-model="editForm.hidden" active-text="Hidden" inactive-text="Visible" inline-prompt />
 				</el-form-item>
 				<el-form-item label="Expiration">
-					<el-date-picker
-						v-model="editForm.expiresAt"
-						format="YYYY-MM-DD HH:mm:ss"
-						type="datetime"
-						value-format="YYYY-MM-DD HH:mm:ss"
-						clearable
-						placeholder="Never"
-					/>
+					<el-date-picker v-model="editForm.expiresAt" format="YYYY-MM-DD HH:mm:ss" type="datetime"
+						value-format="YYYY-MM-DD HH:mm:ss" clearable placeholder="Never" />
 				</el-form-item>
 
 				<el-form-item label="New password (optional)">

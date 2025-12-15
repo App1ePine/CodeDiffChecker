@@ -289,21 +289,8 @@ router.post('/', async (c) => {
     }
 
     // 2. 写入 .env 文件
-    const envContent = `
-      NODE_ENV=production
-      PORT=${env.PORT}
-      DB_TYPE=${dbType}
-      DB_HOST=${dbHost}
-      DB_PORT=${resolvedDbPort}
-      DB_NAME=${dbName}
-      DB_USER=${dbUser}
-      DB_PASSWORD=${dbPassword}
-      JWT_SECRET=${jwtSecret}
-      TOKEN_EXPIRES_IN=7d
-      FRONTEND_ORIGIN=${env.FRONTEND_ORIGIN}
-      SHARE_BASE_URL=${env.SHARE_BASE_URL}
-    `.trim()
-
+    const envContent =
+      `NODE_ENV=production\nPORT=${env.PORT}\nDB_TYPE=${dbType}\nDB_HOST=${dbHost}\nDB_PORT=${resolvedDbPort}\nDB_NAME=${dbName}\nDB_USER=${dbUser}\nDB_PASSWORD=${dbPassword}\nJWT_SECRET=${jwtSecret}\nTOKEN_EXPIRES_IN=7d\nFRONTEND_ORIGIN=${env.FRONTEND_ORIGIN}\nSHARE_BASE_URL=${env.SHARE_BASE_URL}`.trim()
     await writeFile(resolve(process.cwd(), 'server/.env'), envContent)
 
     // 3. 重新加载环境变量并初始化数据库

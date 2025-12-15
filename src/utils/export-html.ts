@@ -2,17 +2,42 @@ import { fetchShareBySlug } from '@/api/shares'
 import type { ShareSummary } from '@/api/types'
 import { decodeContent } from '@/utils/compression'
 
-const CSS_URLS = {
-  elementPlus: 'https://unpkg.com/element-plus@2.9.1/dist/index.css',
-  gitDiffView: 'https://unpkg.com/@git-diff-view/vue@0.0.32/dist/css/diff-view.css',
+const ASSETS = {
+  elementPlus: {
+    cdn: 'https://unpkg.com/element-plus@2.9.1/dist/index.css',
+    local: '/element-plus.css',
+  },
+  gitDiffView: {
+    cdn: 'https://unpkg.com/@git-diff-view/vue@0.0.32/dist/css/diff-view.css',
+    local: '/diff-view.css',
+  },
 }
 
-async function fetchText(url: string): Promise<string> {
-  const response = await fetch(url)
-  if (!response.ok) {
-    throw new Error(`Failed to load resource: ${url}`)
+async function fetchWithFallback(url: string, fallbackUrl?: string): Promise<string> {
+  const tryFetch = async (targetUrl: string, timeout = 5000) => {
+    const controller = new AbortController()
+    const id = setTimeout(() => controller.abort(), timeout)
+    try {
+      const response = await fetch(targetUrl, { signal: controller.signal })
+      clearTimeout(id)
+      if (!response.ok) throw new Error(`Failed to load: ${targetUrl}`)
+      return await response.text()
+    } catch (e) {
+      clearTimeout(id)
+      throw e
+    }
   }
-  return response.text()
+
+  try {
+    return await tryFetch(url, 2000)
+  } catch (error) {
+    if (fallbackUrl) {
+      console.warn(`CDN load failed for ${url}, falling back to ${fallbackUrl}`, error)
+      const origin = window.location.origin
+      return await tryFetch(`${origin}${fallbackUrl}`)
+    }
+    throw error
+  }
 }
 
 function escapeScriptContent(content: string): string {
@@ -28,9 +53,9 @@ export async function exportShareToHtml(shareSummary: ShareSummary) {
     const bundleUrl = `${window.location.origin}/export-bundle.js`
 
     const [bundleJs, epCss, gdvCss] = await Promise.all([
-      fetchText(bundleUrl),
-      fetchText(CSS_URLS.elementPlus),
-      fetchText(CSS_URLS.gitDiffView),
+      fetchWithFallback(bundleUrl),
+      fetchWithFallback(ASSETS.elementPlus.cdn, ASSETS.elementPlus.local),
+      fetchWithFallback(ASSETS.gitDiffView.cdn, ASSETS.gitDiffView.local),
     ])
 
     const appOrigin = window.location.origin
