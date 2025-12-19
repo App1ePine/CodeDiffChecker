@@ -80,7 +80,7 @@ export async function exportShareToHtml(shareSummary: ShareSummary) {
         ${epCss}
         ${gdvCss}
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f5f7fa; }
-        
+
         /* App Layout CSS */
         .app-shell { min-height: 100vh; display: flex; flex-direction: column; background: #f5f6fb; }
         .app-header { position: sticky; top: 0; z-index: 100; display: flex; align-items: center; padding: 16px 32px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(15, 23, 42, 0.08); }
@@ -96,6 +96,16 @@ export async function exportShareToHtml(shareSummary: ShareSummary) {
         .controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
         .diff-wrapper { overflow: auto; min-height: 200px; border: 1px solid #dcdfe6; border-radius: 4px; background: white; }
         .share-summary :deep(.el-descriptions__label) { width: 160px; }
+
+        .editor-row { margin-top: 4px; }
+        .editor-card .el-card__body { padding: 0; }
+        .editor-input .el-textarea__inner {
+            min-height: 280px;
+            border-radius: 0;
+            font-family: Menlo, 'Fira Code', 'SFMono-Regular', Consolas, monospace;
+            font-size: 14px;
+        }
+
         @media (max-width: 768px) {
             .controls { width: 100%; justify-content: flex-start; }
         }

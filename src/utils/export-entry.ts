@@ -2,11 +2,14 @@ import { type DiffFile, generateDiffFile } from '@git-diff-view/file'
 import { DiffModeEnum, DiffView, setEnableFastDiffTemplate } from '@git-diff-view/vue'
 import ElementPlus, {
   ElCard,
+  ElCol,
   ElDescriptions,
   ElDescriptionsItem,
+  ElInput,
   ElInputNumber,
   ElRadioButton,
   ElRadioGroup,
+  ElRow,
   ElSwitch,
 } from 'element-plus'
 import { computed, createApp, h, ref } from 'vue'
@@ -34,8 +37,8 @@ window.initShareViewer = (selector: string, shareData: ShareViewerData) => {
       const share = shareData.share
       const sourceUrl = shareData.sourceUrl
       const shareUrl = shareData.shareUrl
-      const leftContent = shareData.leftContent
-      const rightContent = shareData.rightContent
+      const leftContent = ref(shareData.leftContent)
+      const rightContent = ref(shareData.rightContent)
       const currentYear = new Date().getFullYear()
 
       const fastDiffEnabled = ref(true)
@@ -47,7 +50,7 @@ window.initShareViewer = (selector: string, shareData: ShareViewerData) => {
 
       const diffFile = computed<DiffFile>(() => {
         setEnableFastDiffTemplate(fastDiffEnabled.value)
-        const diff = generateDiffFile('left', leftContent, 'right', rightContent, '', '', {})
+        const diff = generateDiffFile('left', leftContent.value, 'right', rightContent.value, '', '', {})
         diff.initTheme(theme.value)
         diff.init()
         diff.buildSplitDiffLines()
@@ -85,10 +88,13 @@ window.initShareViewer = (selector: string, shareData: ShareViewerData) => {
           fontSize.value = value
         }
       }
+      const updateContent = (target: typeof leftContent) => (value: string) => {
+        target.value = value
+      }
 
       return () =>
         h('div', { class: 'app-shell' }, [
-          // App Header (Centered Title, Clickable)
+          // App Header
           h('header', { class: 'app-header', style: { justifyContent: 'center' } }, [
             h(
               'div',
@@ -104,6 +110,50 @@ window.initShareViewer = (selector: string, shareData: ShareViewerData) => {
           // App Main Content
           h('main', { class: 'app-main' }, [
             h('div', { class: 'share-viewer' }, [
+              // Editor Row
+              h(ElRow, { gutter: 16, class: 'editor-row' }, () => [
+                h(ElCol, { span: 24, md: 12 }, () =>
+                  h(
+                    ElCard,
+                    { class: 'editor-card' },
+                    {
+                      header: () => h('strong', 'Left source'),
+                      default: () =>
+                        h(ElInput, {
+                          modelValue: leftContent.value,
+                          'onUpdate:modelValue': updateContent(leftContent),
+                          type: 'textarea',
+                          rows: 12,
+                          class: 'editor-input',
+                          readonly: false,
+                          resize: 'none',
+                          placeholder: 'Left source',
+                        }),
+                    }
+                  )
+                ),
+                h(ElCol, { span: 24, md: 12 }, () =>
+                  h(
+                    ElCard,
+                    { class: 'editor-card' },
+                    {
+                      header: () => h('strong', 'Right source'),
+                      default: () =>
+                        h(ElInput, {
+                          modelValue: rightContent.value,
+                          'onUpdate:modelValue': updateContent(rightContent),
+                          type: 'textarea',
+                          rows: 12,
+                          class: 'editor-input',
+                          readonly: false,
+                          resize: 'none',
+                          placeholder: 'Right source',
+                        }),
+                    }
+                  )
+                ),
+              ]),
+
               // Diff Card
               h(
                 ElCard,
