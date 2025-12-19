@@ -45,6 +45,6 @@
     }
   },
   "files": {
-    "includes": ["**", "!public/export-bundle.js"]
+    "includes": ["**", "!public", "!node_modules"]
   }
 }

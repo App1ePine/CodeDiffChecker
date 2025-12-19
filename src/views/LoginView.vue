@@ -64,70 +64,71 @@ async function handleSubmit() {
 </script>
 
 <template>
-	<div class="auth-page">
-		<el-card class="auth-card">
-			<h2>Sign in</h2>
-			<p class="hint">Access your saved diffs and manage share links.</p>
+  <div class="auth-page">
+    <el-card class="auth-card">
+      <h2>Sign in</h2>
+      <p class="hint">Access your saved diffs and manage share links.</p>
 
-			<el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleSubmit">
-				<el-form-item label="Username" prop="username">
-					<el-input v-model="form.username" autocomplete="username" placeholder="Your username" />
-				</el-form-item>
+      <el-form ref="formRef" :model="form" :rules="rules" label-position="top" @submit.prevent="handleSubmit">
+        <el-form-item label="Username" prop="username">
+          <el-input v-model="form.username" autocomplete="username" placeholder="Your username" />
+        </el-form-item>
 
-				<el-form-item label="Password" prop="password">
-					<el-input v-model="form.password" autocomplete="current-password" show-password type="password" placeholder="Your password" />
-				</el-form-item>
+        <el-form-item label="Password" prop="password">
+          <el-input v-model="form.password" autocomplete="current-password" show-password type="password"
+            placeholder="Your password" />
+        </el-form-item>
 
-				<el-form-item>
-					<el-button :loading="submitting" style="width: 100%" type="primary" @click="handleSubmit">
-						Sign in
-					</el-button>
-				</el-form-item>
-			</el-form>
+        <el-form-item>
+          <el-button :loading="submitting" style="width: 100%" type="primary" @click="handleSubmit">
+            Sign in
+          </el-button>
+        </el-form-item>
+      </el-form>
 
-			<p class="switch-link">
-				New here?
-				<RouterLink to="/register">Create an account</RouterLink>
-			</p>
-		</el-card>
-	</div>
+      <p class="switch-link">
+        New here?
+        <RouterLink to="/register">Create an account</RouterLink>
+      </p>
+    </el-card>
+  </div>
 </template>
 
 <style scoped>
 .auth-page {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	padding: 48px 16px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 16px;
 }
 
 .auth-card {
-	width: 100%;
-	max-width: 400px;
+  width: 100%;
+  max-width: 400px;
 }
 
 .auth-card h2 {
-	margin-bottom: 4px;
+  margin-bottom: 4px;
 }
 
 .hint {
-	margin: 0 0 24px;
-	color: #6b7280;
+  margin: 0 0 24px;
+  color: #6b7280;
 }
 
 .switch-link {
-	margin-top: 16px;
-	text-align: center;
-	color: #4b5563;
+  margin-top: 16px;
+  text-align: center;
+  color: #4b5563;
 }
 
 .switch-link a {
-	color: #2563eb;
-	font-weight: 600;
-	text-decoration: none;
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 .switch-link a:hover {
-	text-decoration: underline;
+  text-decoration: underline;
 }
 </style>

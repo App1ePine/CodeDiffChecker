@@ -129,157 +129,142 @@ function withDecodedShare(data: ShareDetail): ShareDetail {
 </script>
 
 <template>
-	<div class="share-viewer">
-		<el-card shadow="never">
-			<template #header>
-				<div class="header">
-					<div>
-						<h2 class="title">{{ pageTitle }}</h2>
-						<p v-if="share" class="meta">
-							Shared by <strong>{{ share.ownerName }}</strong>
-							- Created {{ formatDate(share.createdAt) }}
-							- Expires {{ formatDate(share.expiresAt) }}
-						</p>
-					</div>
-					<div v-if="share" class="controls">
-						<el-radio-group size="small" v-model="mode">
-							<el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
-							<el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
-						</el-radio-group>
-						<el-switch size="large" v-model="fastDiffEnabled" active-text="Fast diff" inline-prompt inactive-text="Precise" />
-						<el-switch size="large" v-model="wrap" active-text="Wrap" inline-prompt inactive-text="No wrap" />
-						<el-switch size="large" v-model="highlight" active-text="Highlight" inline-prompt inactive-text="Plain" />
-						<el-radio-group size="small" v-model="theme">
-							<el-radio-button label="light">Light</el-radio-button>
-							<el-radio-button label="dark">Dark</el-radio-button>
-						</el-radio-group>
-						<el-input-number size="small" v-model="fontSize" :min="12" :max="22" :step="1">
-							<template #suffix>px</template>
-						</el-input-number>
-					</div>
-				</div>
-			</template>
+  <div class="share-viewer">
+    <el-card shadow="never">
+      <template #header>
+        <div class="header">
+          <div>
+            <h2 class="title">{{ pageTitle }}</h2>
+            <p v-if="share" class="meta">
+              Shared by <strong>{{ share.ownerName }}</strong>
+              - Created {{ formatDate(share.createdAt) }}
+              - Expires {{ formatDate(share.expiresAt) }}
+            </p>
+          </div>
+          <div v-if="share" class="controls">
+            <el-radio-group size="small" v-model="mode">
+              <el-radio-button :label="DiffModeEnum.Split">Split</el-radio-button>
+              <el-radio-button :label="DiffModeEnum.Unified">Unified</el-radio-button>
+            </el-radio-group>
+            <el-switch size="large" v-model="fastDiffEnabled" active-text="Fast diff" inline-prompt
+              inactive-text="Precise" />
+            <el-switch size="large" v-model="wrap" active-text="Wrap" inline-prompt inactive-text="No wrap" />
+            <el-switch size="large" v-model="highlight" active-text="Highlight" inline-prompt inactive-text="Plain" />
+            <el-radio-group size="small" v-model="theme">
+              <el-radio-button label="light">Light</el-radio-button>
+              <el-radio-button label="dark">Dark</el-radio-button>
+            </el-radio-group>
+            <el-input-number size="small" v-model="fontSize" :min="12" :max="22" :step="1">
+              <template #suffix>px</template>
+            </el-input-number>
+          </div>
+        </div>
+      </template>
 
-			<el-skeleton :loading="loading" :rows="6" animated>
-				<template #default>
-					<el-alert
-						v-if="errorMessage && !needsPassword"
-						:title="errorMessage"
-						class="error-alert"
-						show-icon
-						type="error"
-					/>
+      <el-skeleton :loading="loading" :rows="6" animated>
+        <template #default>
+          <el-alert v-if="errorMessage && !needsPassword" :title="errorMessage" class="error-alert" show-icon
+            type="error" />
 
-					<div v-else-if="needsPassword" class="password-card">
-						<p class="password-hint">{{ errorMessage || 'This share is password protected.' }}</p>
-						<el-input
-							v-model="passwordInput"
-							show-password
-							placeholder="Enter password to view"
-							class="password-input"
-							@keyup.enter="submitPassword"
-						/>
-						<el-button :loading="passwordSubmitting" type="primary" @click="submitPassword">Unlock</el-button>
-					</div>
+          <div v-else-if="needsPassword" class="password-card">
+            <p class="password-hint">{{ errorMessage || 'This share is password protected.' }}</p>
+            <el-input v-model="passwordInput" show-password placeholder="Enter password to view" class="password-input"
+              @keyup.enter="submitPassword" />
+            <el-button :loading="passwordSubmitting" type="primary" @click="submitPassword">Unlock</el-button>
+          </div>
 
-					<template v-else-if="share && diffFile">
-						<div class="diff-wrapper">
-							<DiffView
-								:diff-file="diffFile"
-								:diff-view-font-size="fontSize"
-								:diff-view-highlight="highlight"
-								:diff-view-mode="mode"
-								:diff-view-theme="theme"
-								:diff-view-wrap="wrap"
-							/>
-						</div>
-					</template>
+          <template v-else-if="share && diffFile">
+            <div class="diff-wrapper">
+              <DiffView :diff-file="diffFile" :diff-view-font-size="fontSize" :diff-view-highlight="highlight"
+                :diff-view-mode="mode" :diff-view-theme="theme" :diff-view-wrap="wrap" />
+            </div>
+          </template>
 
-					<el-empty v-else description="Nothing to display" />
-				</template>
-			</el-skeleton>
-		</el-card>
+          <el-empty v-else description="Nothing to display" />
+        </template>
+      </el-skeleton>
+    </el-card>
 
-		<el-card v-if="share" class="share-summary" shadow="never">
-			<template #header>
-				<strong>Summary</strong>
-			</template>
-			<el-descriptions :column="1" border>
-				<el-descriptions-item label="Title">{{ share.title }}</el-descriptions-item>
-				<el-descriptions-item label="Owner">{{ share.ownerName }}</el-descriptions-item>
-				<el-descriptions-item label="Created at">{{ formatDate(share.createdAt) }}</el-descriptions-item>
-				<el-descriptions-item label="Expires on">{{ formatDate(share.expiresAt) }}</el-descriptions-item>
-			</el-descriptions>
-		</el-card>
-	</div>
+    <el-card v-if="share" class="share-summary" shadow="never">
+      <template #header>
+        <strong>Summary</strong>
+      </template>
+      <el-descriptions :column="1" border>
+        <el-descriptions-item label="Title">{{ share.title }}</el-descriptions-item>
+        <el-descriptions-item label="Owner">{{ share.ownerName }}</el-descriptions-item>
+        <el-descriptions-item label="Created at">{{ formatDate(share.createdAt) }}</el-descriptions-item>
+        <el-descriptions-item label="Expires on">{{ formatDate(share.expiresAt) }}</el-descriptions-item>
+      </el-descriptions>
+    </el-card>
+  </div>
 </template>
 
 <style scoped>
 .share-viewer {
-	display: flex;
-	flex-direction: column;
-	gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .header {
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	gap: 16px;
-	flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .title {
-	margin: 0;
+  margin: 0;
 }
 
 .meta {
-	margin: 4px 0 0;
-	color: #6b7280;
+  margin: 4px 0 0;
+  color: #6b7280;
 }
 
 .controls {
-	display: flex;
-	gap: 12px;
-	align-items: center;
-	flex-wrap: wrap;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .diff-wrapper {
-	overflow: auto;
+  overflow: auto;
 }
 
 .error-alert {
-	margin-bottom: 16px;
+  margin-bottom: 16px;
 }
 
 .share-summary :deep(.el-descriptions__label) {
-	width: 160px;
+  width: 160px;
 }
 
 .password-card {
-	display: flex;
-	flex-direction: column;
-	gap: 12px;
-	padding: 16px;
-	border: 1px dashed #d1d5db;
-	border-radius: 12px;
-	background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px dashed #d1d5db;
+  border-radius: 12px;
+  background: #f9fafb;
 }
 
 .password-hint {
-	margin: 0;
-	color: #374151;
+  margin: 0;
+  color: #374151;
 }
 
 .password-input {
-	max-width: 320px;
+  max-width: 320px;
 }
 
 @media (max-width: 768px) {
-	.controls {
-		width: 100%;
-		justify-content: flex-start;
-	}
+  .controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>
